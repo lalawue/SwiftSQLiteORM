@@ -1,0 +1,13 @@
+use_frameworks!
+
+platform :ios, '10.0'
+
+target 'SwiftSQLiteORM_Example' do
+  pod 'SwiftSQLiteORM', :path => '../'
+
+  target 'SwiftSQLiteORM_Tests' do
+    inherit! :search_paths
+
+    
+  end
+end
