@@ -4,10 +4,10 @@ platform :ios, '10.0'
 
 target 'SwiftSQLiteORM_Example' do
   pod 'SwiftSQLiteORM', :path => '../'
+  pod 'Runtime'
+  pod 'GRDB.swift'
 
   target 'SwiftSQLiteORM_Tests' do
     inherit! :search_paths
-
-    
   end
 end

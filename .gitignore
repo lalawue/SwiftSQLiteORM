@@ -34,3 +34,8 @@ Carthage/Build
 # `pod install` in .travis.yml
 #
 # Pods/
+Example/SwiftSQLiteORM.xcodeproj/
+!Example/SwiftSQLiteORM.xcodeproj/project.pbxproj
+Example/SwiftSQLiteORM.xcworkspace/
+Example/Pods/
+

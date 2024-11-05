@@ -1,0 +1,29 @@
+PODS:
+  - GRDB.swift (5.11.0):
+    - GRDB.swift/standard (= 5.11.0)
+  - GRDB.swift/standard (5.11.0)
+  - Runtime (2.2.2)
+  - SwiftSQLiteORM (0.1.0)
+
+DEPENDENCIES:
+  - GRDB.swift
+  - Runtime
+  - SwiftSQLiteORM (from `../`)
+
+SPEC REPOS:
+  trunk:
+    - GRDB.swift
+    - Runtime
+
+EXTERNAL SOURCES:
+  SwiftSQLiteORM:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  GRDB.swift: 9a33d9680cd3c870c82f48a6cbc73d3cfbb235eb
+  Runtime: 67741bd196fb4ad821c4d259ccc527bf734d8806
+  SwiftSQLiteORM: 1c670f860994c1a8dfa84a578b6cde6e11c6044f
+
+PODFILE CHECKSUM: f7456f2bc56c687f0cee417ef4776c3cfc38a344
+
+COCOAPODS: 1.15.2

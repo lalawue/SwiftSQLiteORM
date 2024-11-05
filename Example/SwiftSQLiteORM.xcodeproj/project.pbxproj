@@ -291,10 +291,14 @@
 			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SwiftSQLiteORM_Example/Pods-SwiftSQLiteORM_Example-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/GRDB.swift/GRDB.framework",
+				"${BUILT_PRODUCTS_DIR}/Runtime/Runtime.framework",
 				"${BUILT_PRODUCTS_DIR}/SwiftSQLiteORM/SwiftSQLiteORM.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GRDB.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Runtime.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SwiftSQLiteORM.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
