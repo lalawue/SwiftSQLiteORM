@@ -1,5 +1,6 @@
 //
 //  KeyChainPwd.swift
+//  SwiftSQLiteORM
 //
 //  Created by lalawue on 2024/11/05.
 //
@@ -9,17 +10,17 @@ import LocalAuthentication
 
 fileprivate let _FrameworkAccountName = "SwiftSQLiteORM.Framework"
 
-enum KeyChainPwdData {
-    
-    static func getPwdString() -> String? {
+enum KeyChainPwd {
+
+    static func getPwdString() -> String? {
         let access = SecAccessControlCreateWithFlags(nil,
                                                      kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
                                                      .userPresence,
                                                      nil)
-        
+
         let context = LAContext()
         context.touchIDAuthenticationAllowableReuseDuration = 300
-        
+
         let query: [String : Any] = [kSecClass as String: kSecClassGenericPassword,
                                      kSecAttrAccount as String: _FrameworkAccountName,
                                      kSecAttrAccessControl as String: access as Any,
@@ -27,37 +28,37 @@ enum KeyChainPwdData {
                                      kSecMatchLimit as String: kSecMatchLimitOne,
                                      kSecReturnAttributes as String: true,
                                      kSecReturnData as String: true]
-        
+
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess else {            
+        guard status == errSecSuccess else {
             return nil
         }
 
-        guard let existingItem = item as? [String: Any] else {
+        guard let existingItem = item as? [String: Any],
               let account = existingItem[kSecAttrAccount as String] as? String,
-              account == Self.frameworkAccountName,
+              account == _FrameworkAccountName,
               let pdata = existingItem[kSecValueData as String] as? Data,
               let pstr = String(data: pdata, encoding: .utf8) else {
             return nil
         }
-        
+
         return pstr
     }
-    
-    func storePwdString(_ pstr: String) -> Bool {
+
+    static func setPwdString(_ pstr: String) -> Bool {
         guard let pdata = pstr.data(using: .utf8) else {
             return false
         }
-        
+
         let access = SecAccessControlCreateWithFlags(nil,
                                                      kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
                                                      .userPresence,
                                                      nil)
-        
+
         let context = LAContext()
         context.touchIDAuthenticationAllowableReuseDuration = 300
-        
+
         let query: [String : Any] = [kSecClass as String: kSecClassGenericPassword,
                                      kSecAttrAccount as String: _FrameworkAccountName,
                                      kSecAttrAccessControl as String: access as Any,

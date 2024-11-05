@@ -4,9 +4,6 @@ platform :ios, '10.0'
 
 target 'SwiftSQLiteORM_Example' do
   pod 'SwiftSQLiteORM', :path => '../'
-  pod 'Runtime'
-  pod 'GRDB.swift/SQLCipher'
-  pod 'SQLCipher', '~> 4.0'
 
   target 'SwiftSQLiteORM_Tests' do
     inherit! :search_paths
