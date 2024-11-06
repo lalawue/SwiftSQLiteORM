@@ -17,7 +17,7 @@ final class DBEngine {
     private let dirPath: String
 
     /// queues for diference table
-    private var queues: DBRWLock<[String: DBQueue]> = DBRWLock([:])
+    private var queues = DBRWLock<[String: DBQueue]>([:])
 
     // MARK: -
 

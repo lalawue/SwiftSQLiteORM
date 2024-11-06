@@ -2,7 +2,7 @@
 //  DBLock.swift
 //  SwiftSQLiteORM
 //
-//  Created by lii on 2024/11/6.
+//  Created by lalawue on 2024/11/6.
 //
 
 import Foundation
