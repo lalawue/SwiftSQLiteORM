@@ -15,6 +15,9 @@ class AnyEncoder {
         }
         var encoded: [String: Primitive] = [:]
         for (key, value) in temp {
+            if T.reservedNameSet().contains(key) {
+                continue
+            }
             switch value {
             case let value as Primitive:
                 encoded[key] = value
@@ -170,9 +173,13 @@ class AnyDecoder {
         } else {
             genericType = type
         }
+        var tset = Set<String>()
+        if let ttype = type as? DBTableDef.Type {
+            tset = ttype.reservedNameSet()
+        }
         var object = try xCreateInstance(of: genericType)
         for prop in info.properties {
-            if prop.name.isEmpty { continue }
+            if prop.name.isEmpty || tset.contains(prop.name) { continue }
             if let value = container[prop.name] {
                 let xinfo = try typeInfo(of: prop.type)
                 var did = false

@@ -35,7 +35,7 @@ struct ClassMetadataLayout {
     var iVarDestroyer: UnsafeRawPointer
 }
 
-public func xCreateInstance(of type: Any.Type, constructor: ((PropertyInfo) throws -> Any)? = nil) throws -> Any {
+func xCreateInstance(of type: Any.Type, constructor: ((PropertyInfo) throws -> Any)? = nil) throws -> Any {
     if let defaultConstructor = type as? DefaultConstructor.Type {
         return defaultConstructor.init()
     }

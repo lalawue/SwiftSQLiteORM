@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import GRDB
 
 protocol Primitive {}
 
@@ -30,6 +31,7 @@ extension NSNumber: Primitive {}
 extension NSString: Primitive {}
 extension NSData: Primitive {}
 extension CGFloat: Primitive {}
+extension NSNull: Primitive {}
 
 extension Primitive {
     init?(primitive: Primitive) {
@@ -140,7 +142,10 @@ extension Primitive {
                 r = k.init(v as String)
             default: break
             }
-        default: break
+        case is NSNull.Type:
+            return nil
+        default:
+            break
         }
 
         guard let result = r as? Self else { return nil }
@@ -148,7 +153,7 @@ extension Primitive {
     }
 }
 
-public extension Numeric {
+extension Numeric {
     init(data: Data) {
         self.init(bytes: data.bytes)
     }
@@ -171,7 +176,7 @@ public extension Numeric {
     }
 }
 
-public extension String {
+extension String {
     init(bytes: [UInt8]) {
         self = String(bytes: bytes, encoding: .utf8) ?? String(bytes: bytes, encoding: .ascii) ?? ""
     }
@@ -179,7 +184,7 @@ public extension String {
     var bytes: [UInt8] { utf8.map { UInt8($0) }}
 }
 
-public extension Data {
+extension Data {
     private static let hexTable: [UInt8] = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
 
     private static func hexDigit(_ byte: UInt8) -> UInt8 {
@@ -231,7 +236,7 @@ extension RawRepresentable {
     }
 }
 
-public extension Array {
+extension Array {
     func splat(_ num: Int) -> Any? {
         guard num > 0, num <= count, num <= 10 else { return nil }
         switch num {
