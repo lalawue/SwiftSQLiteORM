@@ -66,7 +66,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
         guard let pinfo = DBTableDefHelper.getInfo(T.self) else {
             return
         }
-        let tset = Set(T.tableKeys.allKeyNames())
+        let tset = Set(T._allKeyNames())
         try db.create(table: T.tableName, ifNotExists: true, body: { tbl in
             pinfo.properties.forEach {
                 if tset.contains($0.name) {
@@ -77,18 +77,17 @@ private class DBTableRecord<T: DBTableDef>: Record {
     }
     
     static func alterTable(db: Database, sdata: DBSchemaTable) throws {
-        let def = T.self
-        guard def.schemaVersion > sdata.version else {
+        guard T.schemaVersion > sdata.version else {
             return
         }
         let oset = Set(sdata.columns)
-        let newColumns = def.tableKeys.allKeyNames().filter({ !oset.contains($0) })
+        let newColumns = T._allKeyNames().filter({ !oset.contains($0) })
         guard newColumns.count > 0 else {
             return
         }
         let nset = Set(newColumns)
-        try db.alter(table: def.tableName, body: { tbl in
-            guard let pinfo = DBTableDefHelper.getInfo(def) else {
+        try db.alter(table: T.tableName, body: { tbl in
+            guard let pinfo = DBTableDefHelper.getInfo(T.self) else {
                 return
             }
             pinfo.properties.forEach {

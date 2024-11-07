@@ -10,10 +10,10 @@ import Foundation
 /// Table ORM mapping definition
 public protocol DBTableDef {
     
-    /// all table key names
-    /// - DO NOT change key name already exist
-    /// - after add keys (properties), increase schema version at the same time
-    static var tableKeys: any DBTableKeys.Type { get }
+    /// associate all key names
+    /// - DO NOT change mapping name already exist
+    /// - after add properties, increase schema version at the same time
+    associatedtype ORMKey: DBTableKey
     
     /// will create according to type
     /// - should be unique in all scope
@@ -42,6 +42,7 @@ extension DBTableDef {
     }
 }
 
-/// Table ORM keys restriction
-public protocol DBTableKeys: CodingKey, CaseIterable {
+/// Table ORM column name
+public protocol DBTableKey: RawRepresentable, CaseIterable where RawValue == String {
+    
 }

@@ -10,15 +10,13 @@ import UIKit
 import SwiftSQLiteORM
 
 struct ABC: DBTableDef {
-
+    
     let name: String
     
-    private enum TableKeys: String, DBTableKeys {
-        case name
-    }
+    typealias ORMKey = TableKey
     
-    static var tableKeys: any DBTableKeys.Type {
-        return Self.TableKeys.self
+    enum TableKey: String, DBTableKey {
+        case name
     }
 }
 
@@ -37,4 +35,3 @@ class ViewController: UIViewController {
     }
 
 }
-

@@ -15,7 +15,7 @@ class AnyEncoder {
         }
         var encoded: [String: Primitive] = [:]
         for (key, value) in temp {
-            if T.reservedNameSet().contains(key) {
+            if T._reservedNameSet().contains(key) {
                 continue
             }
             switch value {
@@ -176,8 +176,8 @@ class AnyDecoder {
             genericType = type
         }
         let tset: Set<String>
-        if let ttype = type as? DBTableDef.Type {
-            tset = ttype.reservedNameSet()
+        if let def = type as? any DBTableDef.Type {
+            tset = def._reservedNameSet()
         } else {
             tset = Self.emptySet
         }

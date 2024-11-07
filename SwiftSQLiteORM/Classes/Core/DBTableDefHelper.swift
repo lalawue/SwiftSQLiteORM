@@ -18,7 +18,7 @@ class DBTableDefHelper {
     }
     
     /// get table definition properties
-    static func getInfo(_ def: DBTableDef.Type) -> TypeInfo? {
+    static func getInfo(_ def: any DBTableDef.Type) -> TypeInfo? {
         let tname = def.tableName
         if let info = shared.infoCache[tname] {
             return info

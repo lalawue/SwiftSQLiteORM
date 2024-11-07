@@ -11,6 +11,8 @@ import GRDB
 /// Table definition schema version
 struct DBSchemaTable: DBTableDef {
 
+    typealias ORMKey = SchemaTableKeys
+
     /// table name
     let name: String
 
@@ -19,15 +21,15 @@ struct DBSchemaTable: DBTableDef {
 
     /// all column names
     let columns: [String]
-
-    fileprivate enum TableKeys: String, DBTableKeys {
+    
+    enum SchemaTableKeys: String, DBTableKey {
         case name
         case version
         case columns
     }
 
-    static var tableKeys: any DBTableKeys.Type {
-        return TableKeys.self
+    static var tableKeys: ORMKey.Type {
+        return SchemaTableKeys.self
     }
 
     static var tableName: String {
@@ -77,7 +79,7 @@ class DBSchemaHelper {
             return sdata
         }
         let sdef = DBSchemaTable.self
-        let sql = "SELECT * FROM \(sdef.tableName) WHERE \(sdef.TableKeys.name) = ?"
+        let sql = "SELECT * FROM \(sdef.tableName) WHERE \(sdef.ORMKey.name) = ?"
         return try DBEngine.read(sdef, { db in
             return try sdef._fetch(db: db, sql: sql, arguments: [tname]).first
         })
@@ -86,7 +88,7 @@ class DBSchemaHelper {
     /// set table schema to mem and database
     static func setSchema<T: DBTableDef>(_ def: T.Type) throws {
         let tname = def.tableName
-        let sdata = DBSchemaTable(name: tname, version: def.schemaVersion, columns: def.tableKeys.allKeyNames())
+        let sdata = DBSchemaTable(name: tname, version: def.schemaVersion, columns: def._allKeyNames())
         shared.schemaCache[tname] = sdata
         let sdef = DBSchemaTable.self
         try DBEngine.write(sdef, { db in

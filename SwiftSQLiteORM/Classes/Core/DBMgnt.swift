@@ -52,16 +52,14 @@ final public class DBMgnt {
     }
     
     public static func push<T: DBTableDef>(_ values: [T]) throws {
-        let def = T.self
-        try DBEngine.write(def, {
-            try def._push(db: $0, values: values)
+        try DBEngine.write(T.self, {
+            try T._push(db: $0, values: values)
         })
     }
     
     public static func delete<T: DBTableDef>(_ values: [T]) throws {
-        let def = T.self
-        try DBEngine.write(def, {
-            try def._clear(db: $0)
+        try DBEngine.write(T.self, {
+            try T._clear(db: $0)
         })
     }
     

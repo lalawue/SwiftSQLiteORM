@@ -18,19 +18,18 @@ func dbLog(isError: Bool = false, _ text: String) {
     }
 }
 
+fileprivate let _nameSet = Set<String>(["tableName", "schemaVersion", "databaseName"])
+
 extension DBTableDef {
     
-    static func reservedNameSet() -> Set<String> {
-        return _reservedNameSet
+    @inline(__always)
+    static func _reservedNameSet() -> Set<String> {
+        return _nameSet
     }
-}
-
-fileprivate let _reservedNameSet = Set<String>(["tableKeys", "tableName", "schemaVersion", "databaseName"])
-
-extension DBTableKeys {
     
-    static func allKeyNames() -> [String] {
-        return Self.allCases.map({ $0.stringValue })
+    @inline(__always)
+    static func _allKeyNames() -> [String] {
+        return ORMKey.allCases.map({ $0.rawValue })
     }
 }
 
