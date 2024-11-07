@@ -17,7 +17,7 @@ final class DBEngine {
     private let dirPath: String
 
     /// queues for diference table
-    private var queues = DBRWLock<[String: DBQueue]>([:])
+    private var queues = NSCache<NSString,DBQueue>()
 
     // MARK: -
 
@@ -30,15 +30,12 @@ final class DBEngine {
     
     private static func _getQueue(_ tbl: DBTableDef.Type) -> DBQueue {
         let tname = tbl.tableName
-        if let q = shared.queues.read({ $0[tname] }) {
+        if let q = shared.queues.object(forKey: tname as NSString) {
             return q
         } else {
-            var q: DBQueue?
-            shared.queues.write({
-                q = DBQueue(shared.dirPath + tbl.databaseName)
-                $0[tname] = q
-            })
-            return q!
+            let q = DBQueue(shared.dirPath + tbl.databaseName)
+            shared.queues.setObject(q, forKey: tname as NSString)
+            return q
         }
     }
     

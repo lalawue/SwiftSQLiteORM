@@ -6,8 +6,9 @@
 //
 
 import GRDB
+import Runtime
 
-/// GRDB Record mapping, CURD manipulate
+/// GRDB Record encode & decode, column names mapping
 final class DBTableRecord<T: DBTableDef>: Record {
     
     private(set) var row = Row()
@@ -19,12 +20,20 @@ final class DBTableRecord<T: DBTableDef>: Record {
     
     /// create table with column names from T.tableKeys
     static func createTable(db: Database) throws {
+        guard let pinfo = DBTableDefHelper.getInfo(T.self) else {
+            return
+        }
+        let tset = Set(T.tableKeys.allKeyNames())
         try db.create(table: T.tableName, body: { tbl in
-            
+            pinfo.properties.forEach {
+                if tset.contains($0.name) {
+                    tbl.column($0.name, getColumnType(rawType: $0.type))
+                }
+            }
         })
     }
     
-    /// fetch GRDB rows then then decode to [T]
+    /// fetch GRDB rows then decode to [T]
     static func fetchAll(db: Database,
                          sql: String,
                          arguments: StatementArguments? = nil) throws -> [T]
@@ -44,16 +53,23 @@ final class DBTableRecord<T: DBTableDef>: Record {
     }
 
     /// push GRDB record after mapping Primitive value to database value
+    /// - insert or update
     static func pushAll(db: Database, values: [T]) throws {
         try AnyEncoder.encode(values).map({ pvalue in
             var dict = [String:DatabaseValueConvertible?]()
             pvalue.keys.forEach {
-                dict[$0] = pvalue[$0]?.toDatabaseValue()
+                dict[$0] = pvalue[$0]?.toDatabaseValue() ?? NSNull()
             }
             return DBTableRecord<T>(row: Row(dict))
         }).forEach { try $0.save(db) }
     }
     
+    /// execute raw sql
+    static func executeRaw(db: Database, sql: String, arguments: StatementArguments? = nil) throws {
+        try db.execute(sql: sql, arguments: arguments ?? StatementArguments())
+    }
+    
+    /// raw to container
     override func encode(to container: inout PersistenceContainer) {
         let r = self.row
         r.columnNames.forEach {

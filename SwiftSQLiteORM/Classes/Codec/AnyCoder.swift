@@ -160,6 +160,8 @@ class AnyDecoder {
         }
         return result
     }
+    
+    private static let emptySet = Set<String>()
 
     private class func createObject(_ type: Any.Type, from container: [String: Any]) throws -> Any {
         var info = try typeInfo(of: type)
@@ -173,9 +175,11 @@ class AnyDecoder {
         } else {
             genericType = type
         }
-        var tset = Set<String>()
+        let tset: Set<String>
         if let ttype = type as? DBTableDef.Type {
             tset = ttype.reservedNameSet()
+        } else {
+            tset = Self.emptySet
         }
         var object = try xCreateInstance(of: genericType)
         for prop in info.properties {

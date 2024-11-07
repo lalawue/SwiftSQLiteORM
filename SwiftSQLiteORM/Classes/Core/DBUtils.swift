@@ -7,7 +7,17 @@
 
 import GRDB
 
-@inline(__always)
+/// wrapper value into class object
+final class DBClsValue<T> {
+    
+    let value: T
+    
+    init(_ value: T) {
+        self.value = value
+    }
+}
+
+@inlinable
 func dbLog(isError: Bool = false, _ text: String) {
     if isError {
         print("[SQLiteORM.Err] \(text)")
@@ -15,6 +25,27 @@ func dbLog(isError: Bool = false, _ text: String) {
 #if DEBUG
         print("[SQLiteORM.Info] \(text)")
 #endif
+    }
+}
+
+func getColumnType(rawType: Any.Type) -> Database.ColumnType {
+    switch rawType {
+    case is Bool.Type:
+        return .boolean
+    case is any BinaryInteger.Type:
+        return .integer
+    case is any BinaryFloatingPoint.Type:
+        return .double
+    case is String.Type: fallthrough
+    case is NSString.Type:
+        return .text
+    case is Date.Type: fallthrough
+    case is NSDate.Type:
+        return .datetime
+    case is Data.Type: fallthrough
+    case is NSData.Type: fallthrough
+    default:
+        return .blob
     }
 }
 

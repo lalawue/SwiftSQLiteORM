@@ -10,44 +10,57 @@ import Foundation
 /// Table ORM mapping definition, manipulation interface
 public protocol DBTableDef {
     
-    /// table keys name
+    /// all table key names
     /// - DO NOT change key name already exist
-    /// - you can add keys (properties), increase schema version at the same time
+    /// - after add keys (properties), increase schema version at the same time
     static var tableKeys: any DBTableKeys.Type { get }
     
-    /// specify table name, or created by engine by default
+    /// will create according to type
+    /// - should be unique in all scope
     static var tableName: String { get }
     
-    /// table schema version for table keys, default 0
-    /// - increase when you add table keys
-    static var tableVersion: Double { get }
+    /// schema version for table keys, default 0
+    /// - increase this number after you alter table keys (only support added)
+    static var schemaVersion: Double { get }
     
-    /// specify database name, or using default
+    /// database file name
     static var databaseName: String { get }
 }
 
 extension DBTableDef {
     
-    /// if empty, will replace by definition mapping name
     public static var tableName: String {
-        return ""
+        return "orm_" + String(describing: Self.self) + "_t"
     }
     
-    public static var tableVersion: Double {
+    public static var schemaVersion: Double {
         return 0
     }
     
     public static var databaseName: String {
         return "orm_default.sqlite"
     }
+}
+
+/// Table ORM keys restriction
+public protocol DBTableKeys: CodingKey, CaseIterable {
+}
+
+// MARK: - Internal
+
+extension DBTableDef {
     
     static func reservedNameSet() -> Set<String> {
         return _reservedNameSet
     }
 }
 
-/// Table ORM keys restriction
-public protocol DBTableKeys: RawRepresentable, CodingKey, CaseIterable {
+fileprivate let _reservedNameSet = Set<String>(["tableKeys", "tableName", "schemaVersion", "databaseName"])
+
+extension DBTableKeys {
+    
+    static func allKeyNames() -> [String] {
+        return Self.allCases.map({ $0.stringValue })
+    }
 }
 
-fileprivate let _reservedNameSet = Set<String>(["tableKeys", "tableName", "tableVersion", "databaseName"])
