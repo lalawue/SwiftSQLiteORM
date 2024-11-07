@@ -7,7 +7,7 @@
 
 import GRDB
 
-/// Database Engine for internal
+/// database engine for multiple database conneciton
 class DBEngine {
     
     /// only one instance
@@ -15,6 +15,8 @@ class DBEngine {
     
     /// database location
     private let dirPath: String
+    
+    private let lock = NSLock()
 
     /// queues for diference table
     private var queues = DBCache<DBQueue>()
@@ -28,29 +30,36 @@ class DBEngine {
         dbLog("dirPath: \(self.dirPath)")
     }
     
-    private static func _getQueue(_ tbl: DBTableDef.Type) -> DBQueue {
-        let tname = tbl.tableName
-        if let q = shared.queues[tname] {
+    private static func _getQueue<T: DBTableDef>(_ def: T.Type) -> DBQueue {
+        let bname = def.databaseName
+        if let q = shared.queues[bname] {
             return q
         } else {
-            let q = DBQueue(shared.dirPath + tbl.databaseName)
-            shared.queues[tname] = q
+            shared.lock.lock()
+            let q = shared.queues[bname] ?? DBQueue(shared.dirPath + bname)
+            shared.queues[bname] = q
+            shared.lock.unlock()
             return q
         }
     }
     
-    @inline(__always)
-    static func read<T>(_ tbl: DBTableDef.Type, _ block: (GRDB.Database) throws -> T) throws -> T? {
-        return try _getQueue(tbl).read(block)
+    @inlinable
+    static func read<T: DBTableDef>(_ def: T.Type,
+                                    _ block: (GRDB.Database) throws -> T?) throws -> T?
+    {
+        return try _getQueue(def).read(block)
     }
 
-    @inline(__always)
-    static func write(_ tbl: DBTableDef.Type, _ block: (GRDB.Database) throws -> Void) throws {
-        try _getQueue(tbl).write(block)
+    @inlinable
+    static func write<T: DBTableDef>(_ def: T.Type,
+                                     _ block: (GRDB.Database) throws -> Void) throws
+    {
+        try _getQueue(def).write(block)
     }
 }
 
-class DBQueue {
+/// every queue is database connection (database file)
+private class DBQueue {
 
     private let _queue: GRDB.DatabaseQueue?
     
@@ -73,7 +82,7 @@ class DBQueue {
         }
     }
     
-    func read<T>(_ block: (GRDB.Database) throws -> T) throws -> T? {
+    func read<T>(_ block: (GRDB.Database) throws -> T?) throws -> T? {
         guard let q = _queue else {
             throw DatabaseError(resultCode: .SQLITE_INTERNAL)
         }

@@ -18,12 +18,12 @@ class DBTableDefHelper {
     }
     
     /// get table definition properties
-    static func getInfo(_ tbl: DBTableDef.Type) -> TypeInfo? {
-        let tname = tbl.tableName
+    static func getInfo(_ def: DBTableDef.Type) -> TypeInfo? {
+        let tname = def.tableName
         if let info = shared.infoCache[tname] {
             return info
         }
-        if let info = try? typeInfo(of: tbl.self) {
+        if let info = try? typeInfo(of: def) {
             shared.infoCache[tname] = info
             return info
         }

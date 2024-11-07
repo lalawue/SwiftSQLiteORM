@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// Table ORM mapping definition, manipulation interface
+/// Table ORM mapping definition
 public protocol DBTableDef {
     
     /// all table key names
@@ -45,22 +45,3 @@ extension DBTableDef {
 /// Table ORM keys restriction
 public protocol DBTableKeys: CodingKey, CaseIterable {
 }
-
-// MARK: - Internal
-
-extension DBTableDef {
-    
-    static func reservedNameSet() -> Set<String> {
-        return _reservedNameSet
-    }
-}
-
-fileprivate let _reservedNameSet = Set<String>(["tableKeys", "tableName", "schemaVersion", "databaseName"])
-
-extension DBTableKeys {
-    
-    static func allKeyNames() -> [String] {
-        return Self.allCases.map({ $0.stringValue })
-    }
-}
-

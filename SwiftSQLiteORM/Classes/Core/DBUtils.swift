@@ -18,6 +18,22 @@ func dbLog(isError: Bool = false, _ text: String) {
     }
 }
 
+extension DBTableDef {
+    
+    static func reservedNameSet() -> Set<String> {
+        return _reservedNameSet
+    }
+}
+
+fileprivate let _reservedNameSet = Set<String>(["tableKeys", "tableName", "schemaVersion", "databaseName"])
+
+extension DBTableKeys {
+    
+    static func allKeyNames() -> [String] {
+        return Self.allCases.map({ $0.stringValue })
+    }
+}
+
 func getColumnType(rawType: Any.Type) -> Database.ColumnType {
     switch rawType {
     case is Bool.Type:

@@ -8,9 +8,53 @@
 import GRDB
 import Runtime
 
-/// GRDB Record encode & decode, column names mapping
-class DBTableRecord<T: DBTableDef>: Record {
+extension DBTableDef {
     
+    /// create table with column names from Self.tableKeys
+    @inline(__always)
+    static func _createTable(db: Database) throws {
+        try DBTableRecord<Self>.createTable(db: db)
+    }
+    
+    /// alter table for adding columns
+    @inline(__always)
+    static func _alterTable(db: Database, sdata: DBSchemaTable) throws {
+        try DBTableRecord<Self>.alterTable(db: db, sdata: sdata)
+    }
+    
+    /// fetch GRDB rows then decode to [T]
+    @inline(__always)
+    static func _fetch(db: Database,
+                       sql: String,
+                       arguments: StatementArguments? = nil) throws -> [Self]
+    {
+        try DBTableRecord<Self>.fetch(db: db, sql: sql, arguments: arguments)
+    }
+    
+    /// push GRDB record after mapping Primitive value to database value
+    /// - insert or update
+    @inline(__always)
+    static func _push(db: Database, values: [Self]) throws {
+        try DBTableRecord<Self>.push(db: db, values: values)
+    }
+
+    /// delete GRDB record from value indicator
+    @inline(__always)
+    static func _delete(db: Database, values: [Self]) throws {
+        try DBTableRecord<Self>.delete(db: db, values: values)
+    }
+    
+    /// clear all entry in table
+    @inline(__always)
+    static func _clear(db: Database) throws {
+        try db.execute(sql: "DELETE FROM \(Self.tableName)")
+    }
+}
+
+/// GRDB Record encode & decode, column names mapping
+private class DBTableRecord<T: DBTableDef>: Record {
+    
+   /// GRDB row data
     private(set) var row = Row()
     
     required init(row: Row) {
@@ -18,13 +62,12 @@ class DBTableRecord<T: DBTableDef>: Record {
         super.init(row: self.row)
     }
     
-    /// create table with column names from T.tableKeys
     static func createTable(db: Database) throws {
         guard let pinfo = DBTableDefHelper.getInfo(T.self) else {
             return
         }
         let tset = Set(T.tableKeys.allKeyNames())
-        try db.create(table: T.tableName, body: { tbl in
+        try db.create(table: T.tableName, ifNotExists: true, body: { tbl in
             pinfo.properties.forEach {
                 if tset.contains($0.name) {
                     tbl.column($0.name, getColumnType(rawType: $0.type))
@@ -32,16 +75,33 @@ class DBTableRecord<T: DBTableDef>: Record {
             }
         })
     }
-
-    /// alter table if T add column keys
-    static func alterTable(db: Database) throws {
-        // FIXME: to be continue
+    
+    static func alterTable(db: Database, sdata: DBSchemaTable) throws {
+        let def = T.self
+        guard def.schemaVersion > sdata.version else {
+            return
+        }
+        let oset = Set(sdata.columns)
+        let newColumns = def.tableKeys.allKeyNames().filter({ !oset.contains($0) })
+        guard newColumns.count > 0 else {
+            return
+        }
+        let nset = Set(newColumns)
+        try db.alter(table: def.tableName, body: { tbl in
+            guard let pinfo = DBTableDefHelper.getInfo(def) else {
+                return
+            }
+            pinfo.properties.forEach {
+                if nset.contains($0.name) {
+                    tbl.add(column: $0.name, getColumnType(rawType: $0.type))
+                }
+            }
+        })
     }
     
-    /// fetch GRDB rows then decode to [T]
-    static func fetchAll(db: Database,
-                         sql: String,
-                         arguments: StatementArguments? = nil) throws -> [T]
+    static func fetch(db: Database,
+                      sql: String,
+                      arguments: StatementArguments? = nil) throws -> [T]
     {
         guard let records = try? super.fetchAll(db, sql: sql, arguments: arguments ?? StatementArguments()) as? [Self] else {
             return []
@@ -57,9 +117,7 @@ class DBTableRecord<T: DBTableDef>: Record {
         return try AnyDecoder.decode(T.self, from: containers)
     }
 
-    /// push GRDB record after mapping Primitive value to database value
-    /// - insert or update
-    static func pushAll(db: Database, values: [T]) throws {
+    static func push(db: Database, values: [T]) throws {
         try AnyEncoder.encode(values).map({ pvalue in
             var dict = [String:DatabaseValueConvertible?]()
             pvalue.keys.forEach {
@@ -69,11 +127,19 @@ class DBTableRecord<T: DBTableDef>: Record {
         }).forEach { try $0.save(db) }
     }
     
-    /// execute raw sql
-    static func executeRaw(db: Database, sql: String, arguments: StatementArguments? = nil) throws {
-        try db.execute(sql: sql, arguments: arguments ?? StatementArguments())
+    static func delete(db: Database, values: [T]) throws {
+        var array = AnyEncoder.encode(values).map({ pvalue in
+            var dict = [String:DatabaseValueConvertible?]()
+            pvalue.keys.forEach {
+                dict[$0] = pvalue[$0]?.toDatabaseValue() ?? NSNull()
+            }
+            return DBTableRecord<T>(row: Row(dict))
+        })
+        while var record = array.popLast() {
+            try record.delete(db)
+        }
     }
-    
+        
     /// raw to container
     override func encode(to container: inout PersistenceContainer) {
         let r = self.row
