@@ -5,13 +5,12 @@
 //  Created by lalawue on 2024/11/7.
 //
 
-import Foundation
 import Runtime
 
 /// TableDef helper, store table property type info
-final class DBTableDefHelper {
+class DBTableDefHelper {
     
-    private let infoCache = NSCache<NSString,DBClsValue<TypeInfo>>()
+    private let infoCache = DBCache<TypeInfo>()
     
     private static let shared = DBTableDefHelper()
     
@@ -21,11 +20,11 @@ final class DBTableDefHelper {
     /// get table definition properties
     static func getInfo(_ tbl: DBTableDef.Type) -> TypeInfo? {
         let tname = tbl.tableName
-        if let info = shared.infoCache.object(forKey: tname as NSString)?.value {
+        if let info = shared.infoCache[tname] {
             return info
         }
         if let info = try? typeInfo(of: tbl.self) {
-            shared.infoCache.setObject(DBClsValue(info), forKey: tname as NSString)
+            shared.infoCache[tname] = info
             return info
         }
         return nil

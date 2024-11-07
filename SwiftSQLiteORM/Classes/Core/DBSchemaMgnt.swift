@@ -44,9 +44,9 @@ struct DBSchemaTable: DBTableDef {
 }
 
 /// record table name, schema, columns' name
-final class DBSchemaMgnt {
+class DBSchemaMgnt {
     
-    private var schemaCache = NSCache<NSString, DBClsValue<DBSchemaTable>>()
+    private var schemaCache = DBCache<DBSchemaTable>()
     
     private static let shared = DBSchemaMgnt()
     
@@ -55,7 +55,7 @@ final class DBSchemaMgnt {
     
     /// get table schema from mem or from database
     static func getSchema<T: DBTableDef>(db: Database, _ ttype: T.Type, _ tname: String) throws -> DBSchemaTable? {
-        if let s = shared.schemaCache.object(forKey: tname as NSString)?.value {
+        if let s = shared.schemaCache[tname] {
             return s
         }
         let stype = DBSchemaTable.self
@@ -67,7 +67,7 @@ final class DBSchemaMgnt {
     /// set table schema to mem and database
     static func setSchema<T: DBTableDef>(db: Database, _ ttype: T.Type, _ tname: String) throws {
         let s = DBSchemaTable(name: tname, version: ttype.schemaVersion, columns: ttype.tableKeys.allKeyNames())
-        shared.schemaCache.setObject(DBClsValue(s), forKey: tname as NSString)
+        shared.schemaCache[tname] = s
         try DBTableRecord<DBSchemaTable>.pushAll(db: db, values: [s])
     }
 }

@@ -9,7 +9,7 @@ import GRDB
 import Runtime
 
 /// GRDB Record encode & decode, column names mapping
-final class DBTableRecord<T: DBTableDef>: Record {
+class DBTableRecord<T: DBTableDef>: Record {
     
     private(set) var row = Row()
     
@@ -31,6 +31,11 @@ final class DBTableRecord<T: DBTableDef>: Record {
                 }
             }
         })
+    }
+
+    /// alter table if T add column keys
+    static func alterTable(db: Database) throws {
+        // FIXME: to be continue
     }
     
     /// fetch GRDB rows then decode to [T]

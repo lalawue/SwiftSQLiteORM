@@ -7,16 +7,6 @@
 
 import GRDB
 
-/// wrapper value into class object
-final class DBClsValue<T> {
-    
-    let value: T
-    
-    init(_ value: T) {
-        self.value = value
-    }
-}
-
 @inlinable
 func dbLog(isError: Bool = false, _ text: String) {
     if isError {

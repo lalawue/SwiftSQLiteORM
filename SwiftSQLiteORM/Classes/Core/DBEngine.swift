@@ -8,7 +8,7 @@
 import GRDB
 
 /// Database Engine for internal
-final class DBEngine {
+class DBEngine {
     
     /// only one instance
     private static let shared = DBEngine()
@@ -17,7 +17,7 @@ final class DBEngine {
     private let dirPath: String
 
     /// queues for diference table
-    private var queues = NSCache<NSString,DBQueue>()
+    private var queues = DBCache<DBQueue>()
 
     // MARK: -
 
@@ -30,11 +30,11 @@ final class DBEngine {
     
     private static func _getQueue(_ tbl: DBTableDef.Type) -> DBQueue {
         let tname = tbl.tableName
-        if let q = shared.queues.object(forKey: tname as NSString) {
+        if let q = shared.queues[tname] {
             return q
         } else {
             let q = DBQueue(shared.dirPath + tbl.databaseName)
-            shared.queues.setObject(q, forKey: tname as NSString)
+            shared.queues[tname] = q
             return q
         }
     }
@@ -50,7 +50,7 @@ final class DBEngine {
     }
 }
 
-final class DBQueue {
+class DBQueue {
 
     private let _queue: GRDB.DatabaseQueue?
     
