@@ -12,11 +12,17 @@ import SwiftSQLiteORM
 struct ABC: DBTableDef {
     
     let name: String
+    let index: Int
     
     typealias ORMKey = TableKey
     
     enum TableKey: String, DBTableKey {
         case name
+        case index
+    }
+    
+    static var tableName: String {
+        return "orm_abc_t"
     }
 }
 
@@ -26,10 +32,9 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         //DBWrapper.createTable(ABC.self)
-        let a = ABC(name: "a")
-        let b = ABC(name: "b")
+        let a = ABC(name: "b", index: 1)
         do {
-            try DBMgnt.push([a, b])
+            try DBMgnt.push([a])
             let array = try DBMgnt.fetch(ABC.self)
             NSLog("fetch array: \(array)")
         } catch {

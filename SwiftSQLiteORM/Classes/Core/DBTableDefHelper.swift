@@ -9,7 +9,9 @@ import Runtime
 
 private let _nameSet = Set<String>(["primaryKey", "tableName", "tableVersion", "databaseName"])
 private let _infoCache = DBCache<TypeInfo>()
-private let _keyCache = DBCache<[String:String]>()
+
+private let _p2cCache = DBCache<[String:String]>()
+private let _c2pCache = DBCache<[String:String]>()
 
 /// TableDef helper
 extension DBTableDef {
@@ -32,18 +34,24 @@ extension DBTableDef {
         return nil
     }
 
-    /// get ORMKey property name -> raw text
-    static func _allKeyMapping() -> [String:String] {
+    /// get ORMKey property name mapping
+    /// - property name -> column name
+    /// - column name -> property name
+    static func _nameMapping() -> (p2c:[String:String], c2p:[String:String]) {
         let tname = Self.tableName
-        if let v = _keyCache[tname] {
-            return v
+        if let p2c = _p2cCache[tname], let c2p = _c2pCache[tname]  {
+            return (p2c, c2p)
         } else {
-            var dict: [String:String] = [:]
+            var p2c: [String:String] = [:]
+            var c2p: [String:String] = [:]
             ORMKey.allCases.forEach {
-                dict["\($0)"] = $0.rawValue
+                let pname = "\($0)"
+                p2c[pname] = $0.rawValue
+                c2p[$0.rawValue] = pname
             }
-            _keyCache[tname] = dict
-            return dict
+            _p2cCache[tname] = p2c
+            _c2pCache[tname] = c2p
+            return (p2c, c2p)
         }
     }
 }

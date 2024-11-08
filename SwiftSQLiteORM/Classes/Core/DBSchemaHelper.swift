@@ -45,7 +45,7 @@ struct DBSchemaTable: DBTableDef {
     }
 
     static var databaseName: String {
-        return "orm_table_schema.sqlite3"
+        return "orm_table_schema.sqlite"
     }
 }
 
@@ -64,17 +64,17 @@ class DBSchemaHelper {
             return sdata
         }
         let sdef = DBSchemaTable.self
-        let sql = "SELECT * FROM ? WHERE ? = ?"
+        let sql = "SELECT * FROM '\(sdef.tableName)' WHERE '\(sdef.ORMKey.tname)' = '\(tname)'"
         return try DBEngine.read(sdef, { db in
-            return try sdef._fetch(db: db, sql: sql, arguments: [sdef.tableName, "\(sdef.ORMKey.tname)", tname])
+            return try sdef._fetch(db: db, sql: sql)
         }).first
     }
     
     /// set table schema to mem and database
     static func setSchema<T: DBTableDef>(_ def: T.Type) throws {
         let tname = def.tableName
-        let keys = def._allKeyMapping().values
-        let sdata = DBSchemaTable(tname: tname, tversion: def.tableVersion, tcolumns: Array(keys))
+        let p2c = def._nameMapping().p2c
+        let sdata = DBSchemaTable(tname: tname, tversion: def.tableVersion, tcolumns: Array(p2c.keys))
         _schemaCache[tname] = sdata
         let sdef = DBSchemaTable.self
         try DBEngine.write(sdef, { db in
