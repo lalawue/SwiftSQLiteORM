@@ -13,20 +13,22 @@ struct ABC: DBTableDef {
     
     let name: String
     let index: Int
+    let location: [String]
     
     typealias ORMKey = TableKey
     
     enum TableKey: String, DBTableKey {
         case name
         case index
+        case location
     }
     
     static var primaryKey: TableKey? {
         return .name
     }
     
-    static var tableName: String {
-        return "orm_abc_t"
+    static var tableVersion: Double {
+        return 0.001
     }
 }
 
@@ -36,7 +38,8 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         //DBWrapper.createTable(ABC.self)
-        let a = ABC(name: "b", index: 1)
+        //let a = ABC(name: "b", index: 1)
+        let a = ABC(name: "c", index: 2, location: ["xixi"])
         do {
             try DBMgnt.push([a])
             let array = try DBMgnt.fetch(ABC.self)

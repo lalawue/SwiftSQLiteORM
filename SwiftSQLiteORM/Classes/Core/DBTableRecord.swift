@@ -108,9 +108,15 @@ private class DBTableRecord<T: DBTableDef>: Record {
             guard let pinfo = T._typeInfo() else {
                 return
             }
-            pinfo.properties.forEach {
-                if let cname = p2c[$0.name], nset.contains($0.name) {
-                    tbl.add(column: cname, getColumnType(rawType: $0.type))
+            pinfo.properties.forEach { p in
+                guard let cname = p2c[p.name], nset.contains(p.name) else {
+                    return
+                }
+                let col = tbl.add(column: cname, getColumnType(rawType: p.type))
+                if let val = (try? defaultValue(of: p.type)) as? DatabaseValueConvertible {
+                    col.defaults(to: val)
+                } else {
+                    col.defaults(to: NSNull())
                 }
             }
         })
