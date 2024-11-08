@@ -71,7 +71,7 @@ private class DBQueue {
             pwd = DBKeyChain.restorePasswd() ?? ""
         }
         if pwd.isEmpty {
-            dbLog(isError: true, "failed to get passwd")
+            dbLog(isError: true, "failed to get database config's passwd")
             self._queue = nil
         } else {
             var config = GRDB.Configuration()

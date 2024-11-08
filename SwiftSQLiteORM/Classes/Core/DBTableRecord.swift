@@ -58,8 +58,8 @@ private class DBTableRecord<T: DBTableDef>: Record {
     private(set) var row = Row()
     
     required init(row: Row) {
-        self.row = row
-        super.init(row: self.row)
+        self.row = row.copy()
+        super.init(row: row)
     }
     
     static func createTable(db: Database) throws {
@@ -71,29 +71,26 @@ private class DBTableRecord<T: DBTableDef>: Record {
         if let pname = T.primaryKey, let cname = p2c["\(pname)"] {
             cpname = cname
         }
-        do {
-            try db.create(table: T.tableName, ifNotExists: true, body: { tbl in
-                pinfo.properties.forEach { p in
-                    guard let cname = p2c[p.name] else {
-                        return
-                    }
-                    let col = tbl.column(cname, getColumnType(rawType: p.type))
-                    if cname == cpname {
-                        col.primaryKey(onConflict: .abort)
-                    }
-                    if let _ = p.type as? ExpressibleByNilLiteral {
-                        // nullable
-                    } else {
-                        col.notNull(onConflict: .abort)
-                    }
+        try db.create(table: T.tableName, ifNotExists: true, body: { tbl in
+            pinfo.properties.forEach { p in
+                guard let cname = p2c[p.name] else {
+                    return
                 }
-                if cpname.isEmpty {
-                    tbl.column("rowid", .integer).primaryKey(onConflict: .abort, autoincrement: true)
+                let col = tbl.column(cname, getColumnType(rawType: p.type))
+                if cname == cpname {
+                    col.primaryKey(onConflict: .abort)
                 }
-            })
-        } catch {
-            dbLog("create table error: \(error.localizedDescription), \(T.tableName) \(T.databaseName)")
-        }
+                if let _ = p.type as? ExpressibleByNilLiteral {
+                    // nullable
+                } else {
+                    col.notNull(onConflict: .abort)
+                }
+                //dbLog("create column '\(cname)' with '\(getColumnType(rawType: p.type))'")
+            }
+            if cpname.isEmpty {
+                tbl.column("rowid", .integer).primaryKey(onConflict: .abort, autoincrement: true)
+            }
+        })
     }
     
     static func alterTable(db: Database, sdata: DBSchemaTable) throws {
@@ -123,48 +120,47 @@ private class DBTableRecord<T: DBTableDef>: Record {
                       sql: String,
                       arguments: StatementArguments? = nil) throws -> [T]
     {
-        guard let records = try? fetchAll(db, sql: sql, arguments: arguments ?? StatementArguments()) as? [Self],
-              records.count > 0 else
-        {
+        dbLog("fetch sql: '\(sql)' in \(T.tableName), \(T.databaseName)")
+        guard let records = try? fetchAll(db, sql: sql, arguments: arguments ?? StatementArguments()) as? [Self] else {
+            return []
+        }
+        guard records.count > 0 else {
             return []
         }
         let c2p = T._nameMapping().c2p
-        let containers = records.map({
-            let r = $0.row
-            var dict = [String:Primitive]()
-            r.columnNames.forEach { cname in
-                if let pname = c2p[cname] {
-                    dict[pname] = r[cname]?.toPrimitive() ?? NSNull()
-                }
+        let containers = records.map({ r in
+            var pdict = [String:Primitive]()
+            c2p.forEach { (cname, pname) in
+                pdict[pname] = r.row[cname]?.toPrimitive() ?? NSNull()
             }
-            return dict
+            return pdict
         })
         return try AnyDecoder.decode(T.self, from: containers)
     }
 
     static func push(db: Database, values: [T]) throws {
         let p2c = T._nameMapping().p2c
-        try AnyEncoder.encode(values).map({ value in
-            var dict = [String:DatabaseValueConvertible?]()
-            value.forEach { p in
-                if let cname = p2c[p.key] {
-                    dict[cname] = value[p.key]?.toDatabaseValue() ?? NSNull()
+        try AnyEncoder.encode(values).map({ pdict in
+            var rdict = [String:DatabaseValueConvertible?]()
+            pdict.forEach { (pname, pvalue) in
+                if let cname = p2c[pname] {
+                    rdict[cname] = pvalue.toDatabaseValue()
                 }
             }
-            return DBTableRecord<T>(row: Row(dict))
+            return DBTableRecord<T>(row: Row(rdict))
         }).forEach { try $0.save(db) }
     }
     
     static func delete(db: Database, values: [T]) throws {
         let p2c = T._nameMapping().p2c
-        var array = AnyEncoder.encode(values).map({ pvalue in
-            var dict = [String:DatabaseValueConvertible?]()
-            pvalue.forEach { p in
-                if let cname = p2c[p.key] {
-                    dict[cname] = pvalue[p.key]?.toDatabaseValue() ?? NSNull()
+        var array = AnyEncoder.encode(values).map({ pdict in
+            var rdict = [String:DatabaseValueConvertible?]()
+            pdict.forEach { (pname, pvalue) in
+                if let cname = p2c[pname] {
+                    rdict[cname] = pvalue.toDatabaseValue()
                 }
             }
-            return DBTableRecord<T>(row: Row(dict))
+            return DBTableRecord<T>(row: Row(rdict))
         })
         while let record = array.popLast() {
             try record.delete(db)

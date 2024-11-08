@@ -21,6 +21,10 @@ struct ABC: DBTableDef {
         case index
     }
     
+    static var primaryKey: TableKey? {
+        return .name
+    }
+    
     static var tableName: String {
         return "orm_abc_t"
     }

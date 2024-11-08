@@ -7,43 +7,15 @@
 
 import GRDB
 
-class DBValue: FetchableRecord, PersistableRecord {
-    
-    var row: Row
-    
-    required init(row: GRDB.Row) {
-        self.row = row
-    }
-    
-    func encode(to container: inout GRDB.PersistenceContainer) {
-        container["name"] = row["name"]
-        container["index"] = row["index"]
-    }
-    
-    static var databaseTableName: String {
-        return "orm_abc_t"
-    }
-}
-
 /// database management interface
 final public class DBMgnt {
     
     public static func fetch<T: DBTableDef>(_ def: T.Type) throws -> [T] {
-        do {
-            return try shared._fetch(def)
-        } catch {
-            dbLog("fetch \(T.tableName) \(T.databaseName) failed: \(error.localizedDescription)")
-            return []
-        }
+        return try shared._fetch(def)
     }
     
     public static func push<T: DBTableDef>(_ values: [T]) throws {
-        do {
-            dbLog("try push \(T.tableName) \(T.databaseName)")
-            try shared._push(values)
-        } catch {
-            dbLog("push \(T.tableName) \(T.databaseName) failed: \(error.localizedDescription)")
-        }
+        try shared._push(values)
     }
     
     public static func delete<T: DBTableDef>(_ values: [T]) throws {
@@ -64,24 +36,15 @@ final public class DBMgnt {
     
     private func _fetch<T: DBTableDef>(_ def: T.Type) throws -> [T] {
         try Self._checkTable(def)
-        let _ = try DBEngine.read(def, { db in
-            if let row = try Row.fetchAll(db, sql: "SELECT * FROM '\(T.tableName)'").first {
-                let value = DBValue(row: row)
-                dbLog("fetch value: \(value.row["name"]) \(value.row["index"])")
-            }
-            return []
+        return try DBEngine.read(def, {
+            try T._fetch(db: $0, sql: "SELECT * FROM `\(def.tableName)`")
         })
-        return []
-//        return try DBEngine.read(def, {
-//            try T._fetch(db: $0, sql: "SELECT * FROM '\(def.tableName)'")
-//        })
     }
     
     private func _push<T: DBTableDef>(_ values: [T]) throws {
         try Self._checkTable(T.self)
         try DBEngine.write(T.self, {
             try T._push(db: $0, values: values)
-            dbLog("push save success \(T.tableName) in \(T.databaseName)")
         })
     }
     
@@ -110,10 +73,6 @@ final public class DBMgnt {
             return
         }
         _flagCache[tname] = true
-        
-        defer {
-            dbLog("DBMgnt check table done for \(T.tableName), \(T.databaseName)")
-        }
         
         // if def's schema table entry not exist, create it first
         guard let sdata = try DBSchemaHelper.getSchema(def) else {
