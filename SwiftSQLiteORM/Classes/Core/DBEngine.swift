@@ -45,7 +45,7 @@ class DBEngine {
     
     @inlinable
     static func read<T: DBTableDef>(_ def: T.Type,
-                                    _ block: (GRDB.Database) throws -> T?) throws -> T?
+                                    _ block: (GRDB.Database) throws -> [T]) throws -> [T]
     {
         return try _getQueue(def).read(block)
     }
@@ -82,7 +82,7 @@ private class DBQueue {
         }
     }
     
-    func read<T>(_ block: (GRDB.Database) throws -> T?) throws -> T? {
+    func read<T>(_ block: (GRDB.Database) throws -> T) throws -> T {
         guard let q = _queue else {
             throw DatabaseError(resultCode: .SQLITE_INTERNAL)
         }

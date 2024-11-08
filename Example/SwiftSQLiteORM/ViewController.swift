@@ -26,7 +26,15 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         //DBWrapper.createTable(ABC.self)
-        NSLog("names: '\(ABC.tableName)'")
+        let a = ABC(name: "a")
+        let b = ABC(name: "b")
+        do {
+            try DBMgnt.push([a, b])
+            let array = try DBMgnt.fetch(ABC.self)
+            NSLog("fetch array: \(array)")
+        } catch {
+            NSLog("failed to operate db: \(error.localizedDescription)")
+        }
     }
 
     override func didReceiveMemoryWarning() {

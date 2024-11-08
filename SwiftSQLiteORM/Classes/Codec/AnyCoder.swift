@@ -13,9 +13,10 @@ class AnyEncoder {
         guard let temp = reflect(any) as? [String: Any] else {
             throw EncodingError.invalidEncode(any)
         }
+        let tset = T._reservedNameSet()
         var encoded: [String: Primitive] = [:]
         for (key, value) in temp {
-            if T._reservedNameSet().contains(key) {
+            if tset.contains(key) {
                 continue
             }
             switch value {

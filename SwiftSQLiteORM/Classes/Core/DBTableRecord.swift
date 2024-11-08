@@ -47,7 +47,7 @@ extension DBTableDef {
     /// clear all entry in table
     @inline(__always)
     static func _clear(db: Database) throws {
-        try db.execute(sql: "DELETE FROM \(Self.tableName)")
+        try db.drop(table: Self.tableName)
     }
 }
 
@@ -63,36 +63,50 @@ private class DBTableRecord<T: DBTableDef>: Record {
     }
     
     static func createTable(db: Database) throws {
-        guard let pinfo = DBTableDefHelper.getInfo(T.self) else {
+        guard let pinfo = T._typeInfo() else {
             return
         }
-        let tset = Set(T._allKeyNames())
-        try db.create(table: T.tableName, ifNotExists: true, body: { tbl in
-            pinfo.properties.forEach {
-                if tset.contains($0.name) {
-                    tbl.column($0.name, getColumnType(rawType: $0.type))
+        let ndict = T._allKeyMapping()
+        var noRowID = true
+        var ckeyName = ""
+        if let pkey = T.primaryKey, let cname = ndict["\(pkey)"] {
+            noRowID = false
+            ckeyName = cname
+        }
+        try db.create(table: T.tableName, ifNotExists: true, withoutRowID: noRowID, body: { tbl in
+            pinfo.properties.forEach { p in
+                guard let cname = ndict[p.name] else {
+                    return
                 }
+                let col = tbl.column(cname, getColumnType(rawType: p.type))
+                if cname == ckeyName {
+                    col.primaryKey(onConflict: .abort)
+                }
+            }
+            if noRowID {
+                tbl.column("rowid", .integer).primaryKey(onConflict: .abort, autoincrement: true)
             }
         })
     }
     
     static func alterTable(db: Database, sdata: DBSchemaTable) throws {
-        guard T.schemaVersion > sdata.version else {
+        guard T.tableVersion > sdata.tversion else {
             return
         }
-        let oset = Set(sdata.columns)
-        let newColumns = T._allKeyNames().filter({ !oset.contains($0) })
+        let oset = Set(sdata.tcolumns)
+        let dict = T._allKeyMapping()
+        let newColumns = dict.keys.filter({ !oset.contains($0) })
         guard newColumns.count > 0 else {
             return
         }
         let nset = Set(newColumns)
         try db.alter(table: T.tableName, body: { tbl in
-            guard let pinfo = DBTableDefHelper.getInfo(T.self) else {
+            guard let pinfo = T._typeInfo() else {
                 return
             }
             pinfo.properties.forEach {
-                if nset.contains($0.name) {
-                    tbl.add(column: $0.name, getColumnType(rawType: $0.type))
+                if let cname = dict[$0.name], nset.contains($0.name) {
+                    tbl.add(column: cname, getColumnType(rawType: $0.type))
                 }
             }
         })
@@ -134,7 +148,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
             }
             return DBTableRecord<T>(row: Row(dict))
         })
-        while var record = array.popLast() {
+        while let record = array.popLast() {
             try record.delete(db)
         }
     }
@@ -142,8 +156,11 @@ private class DBTableRecord<T: DBTableDef>: Record {
     /// raw to container
     override func encode(to container: inout PersistenceContainer) {
         let r = self.row
-        r.columnNames.forEach {
-            container[$0] = r[$0]
+        let cmap = T._allKeyMapping()
+        r.columnNames.forEach { pname in
+            if let cname = cmap[pname] {
+                container[cname] = r[pname]
+            }
         }
     }
     

@@ -14,18 +14,22 @@ struct DBSchemaTable: DBTableDef {
     typealias ORMKey = SchemaTableKeys
 
     /// table name
-    let name: String
+    let tname: String
 
     /// table schema version
-    let version: Double
+    let tversion: Double
 
     /// all column names
-    let columns: [String]
+    let tcolumns: [String]
     
     enum SchemaTableKeys: String, DBTableKey {
-        case name
-        case version
-        case columns
+        case tname = "name"
+        case tversion = "version"
+        case tcolumns = "columns"
+    }
+    
+    static var primaryKey: ORMKey? {
+        return .tname
     }
 
     static var tableKeys: ORMKey.Type {
@@ -36,7 +40,7 @@ struct DBSchemaTable: DBTableDef {
         return "orm_table_schema_t"
     }
 
-    static var schemaVersion: Double {
+    static var tableVersion: Double {
         return 0
     }
 
@@ -47,49 +51,31 @@ struct DBSchemaTable: DBTableDef {
 
 /// record table name, schema version, all column names
 class DBSchemaHelper {
-
-    private var schemaCache = DBCache<DBSchemaTable>()
-
-    private static let shared = DBSchemaHelper()
+    
+    private static var _schemaCache = DBCache<DBSchemaTable>()
 
     private init() {
-        let def = DBSchemaTable.self
-        try? DBEngine.write(def, { db in
-            try def._createTable(db: db)
-        })
-        do {
-            guard let sdata = try Self.getSchema(def) else {
-                try Self.setSchema(DBSchemaTable.self)
-                return
-            }
-            if def.schemaVersion > sdata.version {
-                try DBEngine.write(def, { db in
-                    try def._alterTable(db: db, sdata: sdata)
-                })
-            }
-        } catch {
-            dbLog(isError: true, "failed to create schema table")
-        }
     }
 
     /// get table schema from mem or from database
     static func getSchema<T: DBTableDef>(_ def: T.Type) throws -> DBSchemaTable? {
         let tname = def.tableName
-        if let sdata = shared.schemaCache[tname] {
+        if let sdata = _schemaCache[tname] {
             return sdata
         }
         let sdef = DBSchemaTable.self
-        let sql = "SELECT * FROM \(sdef.tableName) WHERE \(sdef.ORMKey.name) = ?"
+        let sql = "SELECT * FROM ? WHERE ? = ?"
         return try DBEngine.read(sdef, { db in
-            return try sdef._fetch(db: db, sql: sql, arguments: [tname]).first
-        })
+            return try sdef._fetch(db: db, sql: sql, arguments: [sdef.tableName, "\(sdef.ORMKey.tname)", tname])
+        }).first
     }
-
+    
     /// set table schema to mem and database
     static func setSchema<T: DBTableDef>(_ def: T.Type) throws {
         let tname = def.tableName
-        let sdata = DBSchemaTable(name: tname, version: def.schemaVersion, columns: def._allKeyNames())
-        shared.schemaCache[tname] = sdata
+        let keys = def._allKeyMapping().values
+        let sdata = DBSchemaTable(tname: tname, tversion: def.tableVersion, tcolumns: Array(keys))
+        _schemaCache[tname] = sdata
         let sdef = DBSchemaTable.self
         try DBEngine.write(sdef, { db in
             try sdef._push(db: db, values: [sdata])

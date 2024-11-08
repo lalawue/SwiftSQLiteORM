@@ -18,21 +18,6 @@ func dbLog(isError: Bool = false, _ text: String) {
     }
 }
 
-fileprivate let _nameSet = Set<String>(["tableName", "schemaVersion", "databaseName"])
-
-extension DBTableDef {
-    
-    @inline(__always)
-    static func _reservedNameSet() -> Set<String> {
-        return _nameSet
-    }
-    
-    @inline(__always)
-    static func _allKeyNames() -> [String] {
-        return ORMKey.allCases.map({ $0.rawValue })
-    }
-}
-
 func getColumnType(rawType: Any.Type) -> Database.ColumnType {
     switch rawType {
     case is Bool.Type:

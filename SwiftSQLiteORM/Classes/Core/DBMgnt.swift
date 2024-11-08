@@ -9,23 +9,70 @@ import GRDB
 
 /// database management interface
 final public class DBMgnt {
-
-    /// record whether table was checked
-    private let flagCache = DBCache<Bool>()
+    
+    public static func fetch<T: DBTableDef>(_ def: T.Type) throws -> [T] {
+        return try shared._fetch(def)
+    }
+    
+    public static func push<T: DBTableDef>(_ values: [T]) throws {
+        try shared._push(values)
+    }
+    
+    public static func delete<T: DBTableDef>(_ values: [T]) throws {
+        try shared._delete(values)
+    }
+    
+    public static func clear<T: DBTableDef>(_ def: T.Type) throws {
+        try shared._clear(def)
+    }
+    
+    // MARK: -
     
     private static let shared = DBMgnt()
     
     private init() {
+        try? Self._checkTable(DBSchemaTable.self)
     }
     
+    private func _fetch<T: DBTableDef>(_ def: T.Type) throws -> [T] {
+        try Self._checkTable(def)
+        return try DBEngine.read(def, {
+            try T._fetch(db: $0, sql: "SELECT * FROM '\(def.tableName)'")
+        })
+    }
+    
+    private func _push<T: DBTableDef>(_ values: [T]) throws {
+        try Self._checkTable(T.self)
+        try DBEngine.write(T.self, {
+            try T._push(db: $0, values: values)
+        })
+    }
+    
+    private func _delete<T: DBTableDef>(_ values: [T]) throws {
+        try Self._checkTable(T.self)
+        try DBEngine.write(T.self, {
+            try T._clear(db: $0)
+        })
+    }
+    
+    private func _clear<T: DBTableDef>(_ def: T.Type) throws {
+        try Self._checkTable(def)
+        try DBEngine.write(def, {
+            try def._clear(db: $0)
+        })
+    }
+    
+    /// record whether table was checked
+    private static let _flagCache = DBCache<Bool>()
+    
     /// create or alter table if needed
-    static func checkTable<T: DBTableDef>(_ def: T.Type) throws {
+    private static func _checkTable<T: DBTableDef>(_ def: T.Type) throws {
         let tname = def.tableName
         
-        if let _ = shared.flagCache[tname] {
+        if let _ = _flagCache[tname] {
             return
         }
-        shared.flagCache[tname] = true
+        _flagCache[tname] = true
         
         // if def's schema table entry not exist, create it first
         guard let sdata = try DBSchemaHelper.getSchema(def) else {
@@ -37,7 +84,7 @@ final public class DBMgnt {
         }
         
         // if def's schema version increased
-        guard def.schemaVersion > sdata.version else {
+        guard def.tableVersion > sdata.tversion else {
             return
         }
 
@@ -45,27 +92,5 @@ final public class DBMgnt {
             try def._alterTable(db: db, sdata: sdata)
         })
         try DBSchemaHelper.setSchema(def)
-    }
-    
-    public static func fetch<T: DBTableDef>(_ def: T.Type) throws -> [T] {
-        return []
-    }
-    
-    public static func push<T: DBTableDef>(_ values: [T]) throws {
-        try DBEngine.write(T.self, {
-            try T._push(db: $0, values: values)
-        })
-    }
-    
-    public static func delete<T: DBTableDef>(_ values: [T]) throws {
-        try DBEngine.write(T.self, {
-            try T._clear(db: $0)
-        })
-    }
-    
-    public static func clear<T: DBTableDef>(_ def: T.Type) throws {
-        try DBEngine.write(def, {
-            try def._clear(db: $0)
-        })
     }
 }
