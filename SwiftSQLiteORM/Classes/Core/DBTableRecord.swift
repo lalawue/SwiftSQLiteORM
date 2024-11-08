@@ -73,7 +73,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
         guard let pinfo = T._typeInfo() else {
             throw DatabaseError(resultCode: .SQLITE_INTERNAL)
         }
-        let p2c = T._nameMapping().p2c
+        let p2c = T._nameMapping()
         var cpname = ""
         if let pname = T.primaryKey, let cname = p2c["\(pname)"] {
             cpname = cname
@@ -104,7 +104,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
         guard T.tableVersion > sdata.tversion else {
             return
         }
-        let p2c = T._nameMapping().p2c
+        let p2c = T._nameMapping()
         let oset = Set(sdata.tcolumns)
         let newColumns = p2c.compactMap({ oset.contains($0.key) ? nil : $0.value })
         guard newColumns.count > 0 else {
@@ -129,58 +129,38 @@ private class DBTableRecord<T: DBTableDef>: Record {
         })
     }
     
+    /// fetch row to instance
     static func fetch(db: Database, sql: String) throws -> [T] {
         dbLog("(\(T.databaseName)) fetch sql: '\(sql)'")
-        guard let records = try? fetchAll(db, sql: sql) as? [Self] else {
+        guard let records = try? fetchAll(db, sql: sql) as? [Self],
+              records.count > 0 else
+        {
             return []
         }
-        guard records.count > 0 else {
-            return []
-        }
-        let c2p = T._nameMapping().c2p
-        let containers = records.map({ r in
-            var pdict = [String:Primitive]()
-            c2p.forEach { (cname, pname) in
-                pdict[pname] = r.row[cname]?.toPrimitive() ?? NSNull()
-            }
-            return pdict
+        let p2c = T._nameMapping()
+        return try records.map({
+            try AnyDecoder.decode(T.self, p2c, from: $0.row)
         })
-        return try AnyDecoder.decode(T.self, from: containers)
     }
 
+    /// transform to record then insert / update
     static func push(db: Database, values: [T]) throws {
-        let p2c = T._nameMapping().p2c
-        try AnyEncoder.encode(values).map({ pdict in
-            var rdict = [String:DatabaseValueConvertible?]()
-            pdict.forEach { (pname, pvalue) in
-                if let cname = p2c[pname] {
-                    rdict[cname] = pvalue.toDatabaseValue()
-                }
-            }
-            return DBTableRecord<T>(row: Row(rdict))
+        try AnyEncoder.encode(values).map({
+            DBTableRecord<T>(row: Row($0))
         }).forEach { try $0.save(db) }
     }
-    
+
+    /// transform to record then delete
     static func deletes(db: Database, values: [T]) throws {
-        let p2c = T._nameMapping().p2c
-        var array = AnyEncoder.encode(values).map({ pdict in
-            var rdict = [String:DatabaseValueConvertible?]()
-            pdict.forEach { (pname, pvalue) in
-                if let cname = p2c[pname] {
-                    rdict[cname] = pvalue.toDatabaseValue()
-                }
-            }
-            return DBTableRecord<T>(row: Row(rdict))
-        })
-        while let record = array.popLast() {
-            try record.delete(db)
-        }
+        try AnyEncoder.encode(values).map({
+            DBTableRecord<T>(row: Row($0))
+        }).forEach { try $0.delete(db) }
     }
         
-    /// raw to container
+    /// insert / update row to database
     override func encode(to container: inout PersistenceContainer) {
         let r = self.row
-        r.columnNames.forEach { cname in
+        T._nameMapping().forEach { (pname, cname) in
             container[cname] = r[cname]
         }
     }

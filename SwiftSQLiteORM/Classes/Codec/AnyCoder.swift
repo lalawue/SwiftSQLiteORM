@@ -151,6 +151,9 @@ class AnyEncoder {
 }
 
 class AnyDecoder {
+    
+    static let emptySet = Set<String>()
+    
     class func decode<T: DBTableDef>(_ type: T.Type, from containers: [[String: Primitive]]) throws -> [T] {
         return try containers.map { try decode(type, from: $0) }
     }
@@ -161,18 +164,16 @@ class AnyDecoder {
         }
         return result
     }
-    
-    private static let emptySet = Set<String>()
 
-    private class func createObject(_ type: Any.Type, from container: [String: Any]) throws -> Any {
-        var info = try typeInfo(of: type)
+    class func createObject(_ type: Any.Type, from container: [String: Any]) throws -> Any {
+        var info = try rtTypeInfo(of: type)
         let genericType: Any.Type
         if info.kind == .optional {
             guard info.genericTypes.count == 1 else {
                 throw DecodingError.mismatch(type)
             }
             genericType = info.genericTypes.first!
-            info = try typeInfo(of: genericType)
+            info = try rtTypeInfo(of: genericType)
         } else {
             genericType = type
         }
@@ -186,7 +187,7 @@ class AnyDecoder {
         for prop in info.properties {
             if prop.name.isEmpty || tset.contains(prop.name) { continue }
             if let value = container[prop.name] {
-                let xinfo = try typeInfo(of: prop.type)
+                let xinfo = try rtTypeInfo(of: prop.type)
                 var did = false
                 if let xval = value as? Primitive {
                     if let pt = prop.type as? Primitive.Type,
@@ -277,7 +278,7 @@ class AnyDecoder {
                             case .optional:
                                 if xinfo.genericTypes.count == 1 {
                                     let gpt = xinfo.genericTypes.first!
-                                    let yinfo = try typeInfo(of: gpt)
+                                    let yinfo = try rtTypeInfo(of: gpt)
                                     if yinfo.kind == .tuple, let tuple = array.splat(array.count) {
                                         try prop.set(value: tuple, on: &object)
                                     } else {

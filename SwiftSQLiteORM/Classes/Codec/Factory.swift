@@ -40,7 +40,7 @@ func xCreateInstance(of type: Any.Type, constructor: ((PropertyInfo) throws -> A
         return defaultConstructor.init()
     }
 
-    let info = try typeInfo(of: type)
+    let info = try rtTypeInfo(of: type)
     let kind = info.kind
     switch kind {
     case .struct:

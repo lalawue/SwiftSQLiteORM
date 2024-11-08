@@ -8,7 +8,7 @@
 import Foundation
 import GRDB
 
-protocol Primitive {}
+protocol Primitive: DatabaseValueConvertible {}
 
 extension Bool: Primitive {}
 extension Int: Primitive {}

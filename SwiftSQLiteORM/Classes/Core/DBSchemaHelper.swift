@@ -72,7 +72,7 @@ class DBSchemaHelper {
     /// set table schema to mem and database
     static func setSchema<T: DBTableDef>(_ def: T.Type) throws {
         let tname = def.tableName
-        let p2c = def._nameMapping().p2c
+        let p2c = def._nameMapping()
         let sdata = DBSchemaTable(tname: tname, tversion: def.tableVersion, tcolumns: Array(p2c.keys))
         _schemaCache[tname] = sdata
         let sdef = DBSchemaTable.self

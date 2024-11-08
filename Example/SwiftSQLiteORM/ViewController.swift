@@ -42,7 +42,7 @@ class ViewController: UIViewController {
         let a = ABC(name: "c", index: 2, location: ["xixi"])
         do {
             try DBMgnt.push([a])
-            let array = try DBMgnt.fetch(ABC.self, .neq(.index, 1))
+            let array = try DBMgnt.fetch(ABC.self, .eq(.index, 1))
             NSLog("fetch array: \(array)")
         } catch {
             NSLog("failed to operate db: \(error.localizedDescription)")
