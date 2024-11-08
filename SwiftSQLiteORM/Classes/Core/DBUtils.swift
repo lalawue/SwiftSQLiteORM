@@ -54,6 +54,20 @@ func getColumnType(rawType: Any.Type) -> Database.ColumnType {
     }
 }
 
+extension Dictionary where Key == String {
+    
+    func _remapKeys(_ map: [Key:Key]) -> [Key:Value] {
+        let nkvs = self.compactMap { (key, value) in
+            if let nkey = map[key] {
+                return (nkey, value)
+            } else {
+                return nil
+            }
+        }
+        return Dictionary(uniqueKeysWithValues: nkvs)
+    }
+}
+
 extension DatabaseValueConvertible {
     
     func toPrimitive() -> Primitive {
@@ -319,6 +333,15 @@ extension AnyDecoder {
             }
         }
 
-        return object
+        if var obj = object as? any DBTableDef {
+            return objUpdateNew(&obj)
+        } else {
+            return object
+        }
+    }
+    
+    @inlinable
+    class func objUpdateNew<T: DBTableDef>(_ value: inout T) -> T {
+        return T.ormUpdateNew(&value)
     }
 }

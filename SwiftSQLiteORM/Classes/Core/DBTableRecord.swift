@@ -42,6 +42,7 @@ extension DBTableDef {
         try DBTableRecord<Self>.deletes(db: db, values: values)
     }
     
+    /// delete GRDB record from option filter
     @inline(__always)
     static func _delete(db: Database, options: [DBRecordFilter<Self>.Operator]) throws {
         try DBEngine.write(Self.self, {
@@ -137,23 +138,22 @@ private class DBTableRecord<T: DBTableDef>: Record {
         {
             return []
         }
-        let p2c = T._nameMapping()
         return try records.map({
-            try AnyDecoder.decode(T.self, p2c, from: $0.row)
+            try AnyDecoder.decode(T.self, T._nameMapping(), from: $0.row)
         })
     }
 
     /// transform to record then insert / update
     static func push(db: Database, values: [T]) throws {
         try AnyEncoder.encode(values).map({
-            DBTableRecord<T>(row: Row($0))
+            DBTableRecord<T>(row: Row($0._remapKeys(T._nameMapping())))
         }).forEach { try $0.save(db) }
     }
 
     /// transform to record then delete
     static func deletes(db: Database, values: [T]) throws {
         try AnyEncoder.encode(values).map({
-            DBTableRecord<T>(row: Row($0))
+            DBTableRecord<T>(row: Row($0._remapKeys(T._nameMapping())))
         }).forEach { try $0.delete(db) }
     }
         

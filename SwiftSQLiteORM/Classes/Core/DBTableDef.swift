@@ -10,24 +10,29 @@ import Foundation
 /// Table ORM mapping definition
 public protocol DBTableDef {
     
-    /// associate all key names
-    /// - DO NOT change mapping name already exist
-    /// - after add properties, increase schema version at the same time
+    /// associate all propety name -> column name
+    /// - DO NOT delete / change column name already created
+    /// - support add columns
     associatedtype ORMKey: DBTableKey
 
     /// specify primary key, or using hidden rowID
     static var primaryKey: ORMKey? { get }
     
-    /// will create according to type
+    /// specify table name or use type name
     /// - should be unique in all scope
     static var tableName: String { get }
     
-    /// schema version for table keys, default 0
-    /// - increase this number after you alter table keys (only support added)
+    /// schema version for table columns, default 0
+    /// - increase this number after you add columns
     static var tableVersion: Double { get }
     
-    /// database file name
+    /// specify database file name or use default
     static var databaseName: String { get }
+
+    /// update  instance property value created by type reflection
+    /// - only ORMKey covered property can restore value from database column
+    /// - others property will use default value
+    static func ormUpdateNew(_ value: inout Self) -> Self
 }
 
 extension DBTableDef {
@@ -46,6 +51,10 @@ extension DBTableDef {
     
     public static var databaseName: String {
         return "orm_default.sqlite"
+    }
+    
+    public static func ormUpdateNew(_ value: inout Self) -> Self {
+        return value
     }
 }
 

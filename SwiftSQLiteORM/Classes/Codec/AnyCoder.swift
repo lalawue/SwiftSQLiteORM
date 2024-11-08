@@ -306,6 +306,10 @@ class AnyDecoder {
             }
         }
 
-        return object
+        if var obj = object as? any DBTableDef {
+            return objUpdateNew(&obj)
+        } else {
+            return object
+        }
     }
 }

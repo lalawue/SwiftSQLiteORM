@@ -12,7 +12,7 @@ import SwiftSQLiteORM
 struct ABC: DBTableDef {
     
     let name: String
-    let index: Int
+    fileprivate(set) var index: Int
     let location: [String]
     
     typealias ORMKey = TableKey
@@ -30,6 +30,11 @@ struct ABC: DBTableDef {
     static var tableVersion: Double {
         return 0.001
     }
+    
+    static func ormUpdateNew(_ value: inout Self) -> Self {
+        value.index = 1
+        return value
+    }
 }
 
 class ViewController: UIViewController {
@@ -39,10 +44,11 @@ class ViewController: UIViewController {
         // Do any additional setup after loading the view, typically from a nib.
         //DBWrapper.createTable(ABC.self)
         //let a = ABC(name: "b", index: 1)
-        let a = ABC(name: "c", index: 2, location: ["xixi"])
+        let a = ABC(name: "d", index: 2, location: ["xixi"])
         do {
             try DBMgnt.push([a])
-            let array = try DBMgnt.fetch(ABC.self, .eq(.index, 1))
+            let array = try DBMgnt.fetch(ABC.self)
+            //let array = try DBMgnt.fetch(ABC.self, .eq(.index, 1))
             NSLog("fetch array: \(array)")
         } catch {
             NSLog("failed to operate db: \(error.localizedDescription)")
