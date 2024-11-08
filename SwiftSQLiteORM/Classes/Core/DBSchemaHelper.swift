@@ -64,9 +64,8 @@ class DBSchemaHelper {
             return sdata
         }
         let sdef = DBSchemaTable.self
-        let sql = "SELECT * FROM `\(sdef.tableName)` WHERE `\(sdef.ORMKey.tname.rawValue)` = ?"
         return try DBEngine.read(sdef, { db in
-            return try sdef._fetch(db: db, sql: sql, arguments: [tname])
+            return try sdef._fetch(db: db, options: [.eq(.tname, tname)])
         }).first
     }
     

@@ -7,21 +7,30 @@
 
 import GRDB
 
-/// database management interface
+/// ORM Database Management Interface
 final public class DBMgnt {
     
-    public static func fetch<T: DBTableDef>(_ def: T.Type) throws -> [T] {
-        return try shared._fetch(def)
+    /// fetch [T] with filter
+    public static func fetch<T: DBTableDef>(_ def: T.Type, _ filters: DBRecordFilter<T>.Operator...) throws -> [T] {
+        return try shared._fetch(def, Array(filters))
     }
     
+    /// insert / update database with [T]
     public static func push<T: DBTableDef>(_ values: [T]) throws {
         try shared._push(values)
     }
     
-    public static func delete<T: DBTableDef>(_ values: [T]) throws {
-        try shared._delete(values)
+    /// delete entries with [T]
+    public static func deletes<T: DBTableDef>(_ values: [T]) throws {
+        try shared._deletes(values)
     }
     
+    /// delete entries with filter
+    public static func delete<T: DBTableDef>(_ filters: DBRecordFilter<T>.Operator...) throws {
+        try shared._delete(Array(filters))
+    }
+    
+    /// delete all entries
     public static func clear<T: DBTableDef>(_ def: T.Type) throws {
         try shared._clear(def)
     }
@@ -34,24 +43,40 @@ final public class DBMgnt {
         try? Self._checkTable(DBSchemaTable.self)
     }
     
-    private func _fetch<T: DBTableDef>(_ def: T.Type) throws -> [T] {
+    private func _fetch<T: DBTableDef>(_ def: T.Type, _ options: [DBRecordFilter<T>.Operator]) throws -> [T] {
         try Self._checkTable(def)
         return try DBEngine.read(def, {
-            try T._fetch(db: $0, sql: "SELECT * FROM `\(def.tableName)`")
+            return try T._fetch(db: $0, options: options)
         })
     }
     
     private func _push<T: DBTableDef>(_ values: [T]) throws {
+        if values.isEmpty {
+            return
+        }
         try Self._checkTable(T.self)
         try DBEngine.write(T.self, {
             try T._push(db: $0, values: values)
         })
     }
     
-    private func _delete<T: DBTableDef>(_ values: [T]) throws {
+    private func _deletes<T: DBTableDef>(_ values: [T]) throws {
+        if values.isEmpty {
+            return
+        }
         try Self._checkTable(T.self)
         try DBEngine.write(T.self, {
-            try T._clear(db: $0)
+            try T._deletes(db: $0, values: values)
+        })
+    }
+    
+    private func _delete<T: DBTableDef>(_ options: [DBRecordFilter<T>.Operator]) throws {
+        if options.isEmpty {
+            return
+        }
+        try Self._checkTable(T.self)
+        try DBEngine.write(T.self, {
+            try T._delete(db: $0, options: options)
         })
     }
     

@@ -24,11 +24,9 @@ extension DBTableDef {
     
     /// fetch GRDB rows then decode to [T]
     @inline(__always)
-    static func _fetch(db: Database,
-                       sql: String,
-                       arguments: StatementArguments? = nil) throws -> [Self]
-    {
-        try DBTableRecord<Self>.fetch(db: db, sql: sql, arguments: arguments)
+    static func _fetch(db: Database, options: [DBRecordFilter<Self>.Operator]) throws -> [Self] {
+        let sql = "SELECT * FROM `\(Self.tableName)`" + DBRecordFilter<Self>.sqlConditions(options)
+        return try DBTableRecord<Self>.fetch(db: db, sql: sql)
     }
     
     /// push GRDB record after mapping Primitive value to database value
@@ -40,14 +38,23 @@ extension DBTableDef {
 
     /// delete GRDB record from value indicator
     @inline(__always)
-    static func _delete(db: Database, values: [Self]) throws {
-        try DBTableRecord<Self>.delete(db: db, values: values)
+    static func _deletes(db: Database, values: [Self]) throws {
+        try DBTableRecord<Self>.deletes(db: db, values: values)
+    }
+    
+    @inline(__always)
+    static func _delete(db: Database, options: [DBRecordFilter<Self>.Operator]) throws {
+        try DBEngine.write(Self.self, {
+            try $0.execute(sql: "DELETE FROM `\(Self.tableName)`" + DBRecordFilter<Self>.sqlConditions(options))
+        })
     }
     
     /// clear all entry in table
     @inline(__always)
     static func _clear(db: Database) throws {
-        try db.drop(table: Self.tableName)
+        try DBEngine.write(Self.self, {
+            try $0.execute(sql: "DELETE FROM `\(Self.tableName)`")
+        })
     }
 }
 
@@ -122,12 +129,8 @@ private class DBTableRecord<T: DBTableDef>: Record {
         })
     }
     
-    static func fetch(db: Database,
-                      sql: String,
-                      arguments: StatementArguments? = nil) throws -> [T]
-    {
-        dbLog("fetch sql: '\(sql)' in \(T.tableName), \(T.databaseName)")
-        guard let records = try? fetchAll(db, sql: sql, arguments: arguments ?? StatementArguments()) as? [Self] else {
+    static func fetch(db: Database, sql: String) throws -> [T] {
+        guard let records = try? fetchAll(db, sql: sql) as? [Self] else {
             return []
         }
         guard records.count > 0 else {
@@ -157,7 +160,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
         }).forEach { try $0.save(db) }
     }
     
-    static func delete(db: Database, values: [T]) throws {
+    static func deletes(db: Database, values: [T]) throws {
         let p2c = T._nameMapping().p2c
         var array = AnyEncoder.encode(values).map({ pdict in
             var rdict = [String:DatabaseValueConvertible?]()
