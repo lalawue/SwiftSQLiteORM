@@ -44,7 +44,7 @@ public struct DBRecordFilter<T: DBTableDef> {
         case between(Any, Any)
         
         /// 'GROUP BY (...) HAVING ...'
-        case groupBy([T.ORMKey], _ having: String)
+        case groupBy([T.ORMKey], _ having: String = "")
         
         /// 'ORDER BY []'
         case orderBy([T.ORMKey], OrderBy? = nil)
@@ -56,7 +56,7 @@ public struct DBRecordFilter<T: DBTableDef> {
         case raw(String)
     }
     
-    public enum OrderBy {
+    public enum OrderBy: String {
         
         case ASC
         
@@ -64,6 +64,48 @@ public struct DBRecordFilter<T: DBTableDef> {
     }
     
     static func sqlConditions(_ array: [Operator]) -> String {
-        return ""
+        if array.isEmpty {
+            return ""
+        }
+        var sql = " WHERE"
+        array.forEach { op in
+            switch op {
+            case .eq(let key, let value):
+                sql += " `\(key.rawValue)` = '\(value)'"
+            case .neq(let key, let value):
+                sql += " `\(key.rawValue)` != '\(value)'"
+            case .gt(let key, let value):
+                sql += " `\(key.rawValue)` > '\(value)'"
+            case .gte(let key, let value):
+                sql += " `\(key.rawValue)` >= '\(value)'"
+            case .lt(let key, let value):
+                sql += " `\(key.rawValue)` < '\(value)'"
+            case .lte(let key, let value):
+                sql += " `\(key.rawValue)` <= '\(value)'"
+            case .like(let key, let value):
+                sql += " `\(key)` LIKE \(value)"
+            case .in(let values):
+                sql += " IN (\(values.map{"\($0)"}.joined(separator: ",")))"
+            case .not:
+                sql += " NOT"
+            case .between(let v1, let v2):
+                sql += " BETWEEN \(v1) AND \(v2)"
+            case .groupBy(let keys, let having):
+                sql += " GROUP BY \(keys.map{ "`\($0.rawValue)`" }.joined(separator: ","))"
+                if !having.isEmpty {
+                    sql += " HAVING \(having)"
+                }
+            case .orderBy(let keys, let seq):
+                sql += " ORDER BY \(keys.map{ "`\($0.rawValue)`" }.joined(separator: ","))"
+                if let seq = seq {
+                    sql += " \(seq.rawValue)"
+                }
+            case .limit(let num):
+                sql += " LIMIT \(num)"
+            case .raw(let str):
+                sql += str
+            }
+        }
+        return sql
     }
 }
