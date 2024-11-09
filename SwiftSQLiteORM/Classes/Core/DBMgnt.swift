@@ -26,8 +26,8 @@ final public class DBMgnt {
     }
     
     /// delete entries with filter
-    public static func delete<T: DBTableDef>(_ filters: DBRecordFilter<T>.Operator...) throws {
-        try shared._delete(Array(filters))
+    public static func delete<T: DBTableDef>(_ def: T.Type, _ filters: DBRecordFilter<T>.Operator...) throws {
+        try shared._delete(def, Array(filters))
     }
     
     /// delete all entries
@@ -46,7 +46,7 @@ final public class DBMgnt {
     private func _fetch<T: DBTableDef>(_ def: T.Type, _ options: [DBRecordFilter<T>.Operator]) throws -> [T] {
         try Self._checkTable(def)
         return try DBEngine.read(def, {
-            return try T._fetch(db: $0, options: options)
+            return try def._fetch(db: $0, options: options)
         })
     }
     
@@ -64,19 +64,22 @@ final public class DBMgnt {
         if values.isEmpty {
             return
         }
+        guard let _ = T.primaryKey else {
+            throw DBORMError.OnlySupportWithPrimaryKey
+        }
         try Self._checkTable(T.self)
         try DBEngine.write(T.self, {
             try T._deletes(db: $0, values: values)
         })
     }
     
-    private func _delete<T: DBTableDef>(_ options: [DBRecordFilter<T>.Operator]) throws {
+    private func _delete<T: DBTableDef>(_ def: T.Type, _ options: [DBRecordFilter<T>.Operator]) throws {
         if options.isEmpty {
             return
         }
-        try Self._checkTable(T.self)
-        try DBEngine.write(T.self, {
-            try T._delete(db: $0, options: options)
+        try Self._checkTable(def)
+        try DBEngine.write(def, {
+            try def._delete(db: $0, options: options)
         })
     }
     

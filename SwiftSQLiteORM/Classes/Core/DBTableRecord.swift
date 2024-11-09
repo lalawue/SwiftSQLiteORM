@@ -45,17 +45,13 @@ extension DBTableDef {
     /// delete GRDB record from option filter
     @inline(__always)
     static func _delete(db: Database, options: [DBRecordFilter<Self>.Operator]) throws {
-        try DBEngine.write(Self.self, {
-            try $0.execute(sql: "DELETE FROM `\(Self.tableName)`" + DBRecordFilter<Self>.sqlConditions(options))
-        })
+        try db.execute(sql: "DELETE FROM `\(Self.tableName)`" + DBRecordFilter<Self>.sqlConditions(options))
     }
     
     /// clear all entry in table
     @inline(__always)
     static func _clear(db: Database) throws {
-        try DBEngine.write(Self.self, {
-            try $0.execute(sql: "DELETE FROM `\(Self.tableName)`")
-        })
+        try db.execute(sql: "DELETE FROM `\(Self.tableName)`")
     }
 }
 
@@ -72,7 +68,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
     
     static func createTable(db: Database) throws {
         guard let pinfo = T._typeInfo() else {
-            throw DatabaseError(resultCode: .SQLITE_INTERNAL)
+            throw DBORMError.FailedToGetTypeInfo
         }
         let p2c = T._nameMapping()
         var cpname = ""
@@ -88,15 +84,18 @@ private class DBTableRecord<T: DBTableDef>: Record {
                 if cname == cpname {
                     col.primaryKey(onConflict: .abort)
                 }
-                if let _ = p.type as? ExpressibleByNilLiteral {
+                var notNull = true
+                if let _ = p.type as? ExpressibleByNilLiteral.Type {
                     // nullable
+                    notNull = false
                 } else {
                     col.notNull(onConflict: .abort)
                 }
-                //dbLog("create column '\(cname)' with '\(getColumnType(rawType: p.type))'")
+                dbLog("create column '\(cname)' with '\(getColumnType(rawType: p.type))' notNull:\(notNull)")
             }
             if cpname.isEmpty {
                 tbl.column("rowid", .integer).primaryKey(onConflict: .abort, autoincrement: true)
+                dbLog("create column 'rowid'")
             }
         })
     }

@@ -84,14 +84,14 @@ private class DBQueue {
     
     func read<T>(_ block: (GRDB.Database) throws -> T) throws -> T {
         guard let q = _queue else {
-            throw DatabaseError(resultCode: .SQLITE_INTERNAL)
+            throw DBORMError.FailedToCreateDBQueue
         }
         return try q.read(block)
     }
 
     func write(_ block: (GRDB.Database) throws -> Void) throws {
         guard let q = _queue else {
-            throw DatabaseError(resultCode: .SQLITE_INTERNAL)
+            throw DBORMError.FailedToCreateDBQueue
         }
         try q.inTransaction(.deferred, { db in
             do {
