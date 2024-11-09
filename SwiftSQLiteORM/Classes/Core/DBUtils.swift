@@ -91,16 +91,33 @@ func getColumnType(rawType: Any.Type) -> Database.ColumnType {
     case is NSNumber.Type: fallthrough
     case is NSNumber?.Type:
         return .numeric
+        
+
+    case is Decimal.Type: fallthrough
+    case is Decimal?.Type:
+        // store as 'String' in databaseValue
+        return .blob
+        
+
+    case is Date.Type: fallthrough
+    case is Date?.Type: fallthrough
+    case is NSDate.Type: fallthrough
+    case is Date?.Type:
+        // store as 'String' in databaseValue
+        return .blob
+
+
     case is UUID.Type: fallthrough
     case is UUID?.Type: fallthrough
     case is NSUUID.Type: fallthrough
-    case is NSUUID?.Type: fallthrough
+    case is NSUUID?.Type:
+        // store as 'Data' in databaseValue
+        return .blob
+
     case is Data.Type: fallthrough
     case is Data?.Type: fallthrough
     case is NSData.Type: fallthrough
     case is NSData?.Type: fallthrough
-    case is Decimal.Type: fallthrough
-    case is Decimal?.Type: fallthrough
     default:
         return .blob
     }

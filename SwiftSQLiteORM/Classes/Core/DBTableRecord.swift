@@ -84,18 +84,16 @@ private class DBTableRecord<T: DBTableDef>: Record {
                 if cname == cpname {
                     col.primaryKey(onConflict: .abort)
                 }
-                var notNull = true
                 if let _ = p.type as? ExpressibleByNilLiteral.Type {
                     // nullable
-                    notNull = false
                 } else {
                     col.notNull(onConflict: .abort)
                 }
-                dbLog("create column '\(cname)' with '\(getColumnType(rawType: p.type))' notNull:\(notNull)")
+                //dbLog("create column '\(cname)' with '\(getColumnType(rawType: p.type))'")
             }
             if cpname.isEmpty {
                 tbl.column("rowid", .integer).primaryKey(onConflict: .abort, autoincrement: true)
-                dbLog("create column 'rowid'")
+                //dbLog("create column 'rowid'")
             }
         })
     }

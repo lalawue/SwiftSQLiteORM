@@ -9,6 +9,11 @@ import GRDB
 
 /// ORM Database Management Interface
 final public class DBMgnt {
+
+    /// database path
+    public var databasePath: String {
+        return DBEngine.databasePath
+    }
     
     /// fetch [T] with filter
     public static func fetch<T: DBTableDef>(_ def: T.Type, _ filters: DBRecordFilter<T>.Operator...) throws -> [T] {

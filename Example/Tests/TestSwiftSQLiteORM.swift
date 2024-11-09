@@ -62,8 +62,8 @@ struct BasicType: DBTableDef, Equatable {
     var uuid: UUID
     var nsuuid: NSUUID
 
-//    var date: Date
-//    var nsdate: NSDate
+    var date: Date
+    var nsdate: NSDate
     
     typealias ORMKey = Columns
     
@@ -100,8 +100,8 @@ struct BasicType: DBTableDef, Equatable {
         case uuid
         case nsuuid
 
-//        case date
-//        case nsdate
+        case date
+        case nsdate
     }
     
     mutating func changeCopy(_ block: (inout Self) -> Void) -> Self {
@@ -141,11 +141,11 @@ struct BasicType: DBTableDef, Equatable {
         let uuid = UUID()
         let nsuuid = NSUUID(uuidString: uuid.uuidString)!
 
-//        let date = Date()
-//        let nsdate = NSDate(timeIntervalSince1970: date.timeIntervalSince1970)
+        let date = Date()
+        let nsdate = NSDate(timeIntervalSince1970: date.timeIntervalSince1970)
         
         return BasicType(bool: bool,
-                         bool_opt: orNil(bool),
+                         bool_opt: nil,
                          int: int,
                          int8: int8,
                          int16: int16,
@@ -166,9 +166,9 @@ struct BasicType: DBTableDef, Equatable {
                          cgfloat: cgfloat,
                          decimal: decimal,
                          uuid: uuid,
-                         nsuuid: nsuuid
-//                         date: date,
-//                         nsdate: nsdate
+                         nsuuid: nsuuid,
+                         date: date,
+                         nsdate: nsdate
         )
     }
     
@@ -203,16 +203,16 @@ struct BasicType: DBTableDef, Equatable {
                 (lhs.decimal == rhs.decimal) &&
                 
                 (lhs.uuid == rhs.uuid) &&
-                (lhs.nsuuid == rhs.nsuuid)
+                (lhs.nsuuid == rhs.nsuuid) &&
 
-//                (lhs.date == rhs.date) &&
-//                (lhs.nsdate == rhs.nsdate)
+                // GRDB will store date as "yyyy-MM-dd HH:mm:ss.SSS" in database
+                (lhs.date.databaseValue == rhs.date.databaseValue) &&
+                (lhs.nsdate.databaseValue == rhs.nsdate.databaseValue)
         )
     }
     
     func print() {
-        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal) uuid:\(uuid) nsuuid:\(nsuuid)"
-    //date:\(date) nsdate:\(nsdate)"
+        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal), uuid:\(uuid), nsuuid:\(nsuuid), date:\(date.timeIntervalSinceReferenceDate), nsdate:\(nsdate.timeIntervalSinceReferenceDate)"
         NSLog(str)
     }
 }
@@ -254,6 +254,12 @@ class Tests: XCTestCase {
             tryBlock({ try DBMgnt.delete(BasicType.self, .eq(.int, c.int)) })
             let c1 = tryBlock({ try DBMgnt.fetch(BasicType.self, .eq(.int, c.int)) }).first ?? u
             XCTAssert(c1 == u, "Failed")
+        }
+        
+        do {
+            tryBlock({ try DBMgnt.clear(BasicType.self) })
+            let all = tryBlock({ try DBMgnt.fetch(BasicType.self) })
+            XCTAssert(all.count == 0, "Failed")
         }
     }
     

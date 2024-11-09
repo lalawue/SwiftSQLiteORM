@@ -11,16 +11,19 @@ import GRDB
 protocol Primitive: DatabaseValueConvertible {}
 
 extension Bool: Primitive {}
+
 extension Int: Primitive {}
 extension Int8: Primitive {}
 extension Int16: Primitive {}
 extension Int32: Primitive {}
 extension Int64: Primitive {}
+
 extension UInt: Primitive {}
 extension UInt8: Primitive {}
 extension UInt16: Primitive {}
 extension UInt32: Primitive {}
 extension UInt64: Primitive {}
+
 extension Float: Primitive {}
 extension Double: Primitive {}
 
@@ -31,12 +34,16 @@ extension NSString: Primitive {}
 extension NSData: Primitive {}
 
 extension NSNumber: Primitive {}
-//extension NSDecimalNumber: Primitive {} // for databaseValue was override by NSNumber
+//extension NSDecimalNumber: Primitive {} // not support, for databaseValue was override by NSNumber
 extension Decimal: Primitive {}
 extension CGFloat: Primitive {}
 
 extension UUID: Primitive {}
 extension NSUUID: Primitive {}
+
+// GRDB will store date as "yyyy-MM-dd HH:mm:ss.SSS" in database, sometimes will loss precision
+extension Date: Primitive {}
+extension NSDate: Primitive {}
 
 extension NSNull: Primitive {}
 
@@ -177,8 +184,8 @@ extension Primitive {
         case is Date.Type:
             if r != nil { break }
             switch primitive {
-            case let v as Double:
-                r = Date(timeIntervalSince1970: v)
+            case let v as String: // GRDB's UUID databaseValue
+                r = Date.fromDatabaseValue(v.databaseValue)
             default:
                 r = Date()
             }
@@ -186,8 +193,8 @@ extension Primitive {
         case is NSDate.Type:
             if r != nil { break }
             switch primitive {
-            case let v as Double:
-                r = NSDate(timeIntervalSince1970: v)
+            case let v as String: // GRDB's UUID databaseValue
+                r = NSDate.fromDatabaseValue(v.databaseValue)
             default:
                 r = NSDate()
             }

@@ -20,6 +20,11 @@ class DBEngine {
 
     /// queues for diference table
     private var queues = DBCache<DBQueue>()
+    
+    // database path
+    static var databasePath: String {
+        return shared.dirPath
+    }
 
     // MARK: -
 
@@ -42,7 +47,7 @@ class DBEngine {
             return q
         }
     }
-    
+        
     @inlinable
     static func read<T: DBTableDef>(_ def: T.Type,
                                     _ block: (GRDB.Database) throws -> [T]) throws -> [T]
