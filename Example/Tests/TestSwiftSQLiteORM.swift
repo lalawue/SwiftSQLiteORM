@@ -59,9 +59,9 @@ struct BasicType: DBTableDef, Equatable {
     
     var decimal: Decimal
 
-//    var uuid: UUID
-//    var nsuuid: NSUUID
-//
+    var uuid: UUID
+    var nsuuid: NSUUID
+
 //    var date: Date
 //    var nsdate: NSDate
     
@@ -97,10 +97,9 @@ struct BasicType: DBTableDef, Equatable {
         
         case decimal
 
-//
-//        case uuid
-//        case nsuuid
-//
+        case uuid
+        case nsuuid
+
 //        case date
 //        case nsdate
     }
@@ -139,9 +138,9 @@ struct BasicType: DBTableDef, Equatable {
         
         let decimal = isTrue() ? Decimal.greatestFiniteMagnitude : Decimal.leastFiniteMagnitude
         
-//        let uuid = UUID()
-//        let nsuuid = NSUUID(uuidString: uuid.uuidString)!
-//
+        let uuid = UUID()
+        let nsuuid = NSUUID(uuidString: uuid.uuidString)!
+
 //        let date = Date()
 //        let nsdate = NSDate(timeIntervalSince1970: date.timeIntervalSince1970)
         
@@ -165,9 +164,9 @@ struct BasicType: DBTableDef, Equatable {
                          nsdata: nsdata,
                          nsnumber: nsnumber,
                          cgfloat: cgfloat,
-                         decimal: decimal
-//                         uuid: uuid,
-//                         nsuuid: nsuuid,
+                         decimal: decimal,
+                         uuid: uuid,
+                         nsuuid: nsuuid
 //                         date: date,
 //                         nsdate: nsdate
         )
@@ -201,19 +200,19 @@ struct BasicType: DBTableDef, Equatable {
                 (lhs.nsnumber == rhs.nsnumber) &&
                 (lhs.cgfloat == rhs.cgfloat) &&
                 
-                (lhs.decimal == rhs.decimal)
+                (lhs.decimal == rhs.decimal) &&
                 
-//                (lhs.uuid == rhs.uuid) &&
-//                (lhs.nsuuid == rhs.nsuuid) &&
-//
+                (lhs.uuid == rhs.uuid) &&
+                (lhs.nsuuid == rhs.nsuuid)
+
 //                (lhs.date == rhs.date) &&
 //                (lhs.nsdate == rhs.nsdate)
         )
     }
     
     func print() {
-        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal)"
-    //uuid:\(uuid) nsuuid:\(nsuuid) date:\(date) nsdate:\(nsdate)"
+        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal) uuid:\(uuid) nsuuid:\(nsuuid)"
+    //date:\(date) nsdate:\(nsdate)"
         NSLog(str)
     }
 }

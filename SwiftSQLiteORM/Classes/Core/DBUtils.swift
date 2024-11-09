@@ -88,8 +88,6 @@ func getColumnType(rawType: Any.Type) -> Database.ColumnType {
     case is NSDate.Type: fallthrough
     case is NSDate?.Type:
         return .datetime
-    case is NSDecimalNumber.Type: fallthrough
-    case is NSDecimalNumber?.Type: fallthrough
     case is NSNumber.Type: fallthrough
     case is NSNumber?.Type:
         return .numeric

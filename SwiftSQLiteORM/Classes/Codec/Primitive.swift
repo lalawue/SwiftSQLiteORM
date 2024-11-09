@@ -27,12 +27,17 @@ extension Double: Primitive {}
 extension String: Primitive {}
 extension Data: Primitive {}
 
-extension NSNumber: Primitive {}
-//extension NSDecimalNumber: Primitive {} // for databaseValue was override by NSNumber
 extension NSString: Primitive {}
 extension NSData: Primitive {}
+
+extension NSNumber: Primitive {}
+//extension NSDecimalNumber: Primitive {} // for databaseValue was override by NSNumber
 extension Decimal: Primitive {}
 extension CGFloat: Primitive {}
+
+extension UUID: Primitive {}
+extension NSUUID: Primitive {}
+
 extension NSNull: Primitive {}
 
 fileprivate let _posixLocale = Locale(identifier: "en_US_POSIX")
@@ -150,8 +155,10 @@ extension Primitive {
         case is UUID.Type:
             if r != nil { break }
             switch primitive {
-            case let v as String:
-                r = UUID(uuidString: v)
+            case let v as Data: // GRDB's UUID databaseValue
+                r = v.withUnsafeBytes {
+                    UUID(uuid: $0.bindMemory(to: uuid_t.self).first!)
+                }
             default:
                 r = UUID(uuidString: "\(primitive)")
             }
@@ -159,8 +166,10 @@ extension Primitive {
         case is NSUUID.Type:
             if r != nil { break }
             switch primitive {
-            case let v as String:
-                r = NSUUID(uuidString: v)
+            case let v as Data: // GRDB's UUID databaseValue
+                r = v.withUnsafeBytes {
+                    NSUUID.init(uuidBytes: $0.bindMemory(to: UInt8.self).baseAddress)
+                }
             default:
                 r = NSUUID(uuidString: "\(primitive)")
             }
