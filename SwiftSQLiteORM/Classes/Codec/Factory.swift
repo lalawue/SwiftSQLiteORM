@@ -19,6 +19,9 @@ extension NSString: DefaultConstructor {}
 extension NSNumber: DefaultConstructor {}
 extension NSData: DefaultConstructor {}
 
+extension NSDate: DefaultConstructor {}
+extension NSUUID: DefaultConstructor {}
+
 struct ClassMetadataLayout {
     var _kind: Int // isaPointer for classes
     var superClass: Any.Type

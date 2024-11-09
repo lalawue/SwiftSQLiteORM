@@ -263,13 +263,23 @@ class AnyDecoder {
             if !did, let string = value as? String {
                 switch prop.type {
                 case is String?.Type: fallthrough
-                case is String.Type:
+                case is String.Type: fallthrough
+                case is NSString?.Type: fallthrough
+                case is NSString.Type:
                     try prop.set(value: string, on: &object)
 
                 case is Data?.Type: fallthrough
-                case is Data.Type:
+                case is Data.Type: fallthrough
+                case is NSData?.Type: fallthrough
+                case is NSData.Type:
                     let data = Data(hex: string)
                     try prop.set(value: data, on: &object)
+                    
+                case is UUID.Type: fallthrough
+                case is UUID?.Type: fallthrough
+                case is NSUUID.Type: fallthrough
+                case is NSUUID?.Type:
+                    try prop.set(value: string, on: &object)
 
                 default:
                     let data = Data(string.bytes)

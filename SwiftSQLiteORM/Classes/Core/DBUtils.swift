@@ -15,11 +15,45 @@ func rtTypeInfo(of tinfo: Any.Type) throws -> TypeInfo {
     let tname = "\(tinfo)"
     if let info = _infoCache[tname] {
         return info
-    } else {
-        let info = try typeInfo(of: tinfo)
-        _infoCache[tname] = info
-        return info
     }
+    let info: TypeInfo
+    switch tinfo {
+    case is NSString.Type:
+        info = try fakeType(String.self, NSString.self)
+    case is NSString?.Type:
+        info = try fakeType(String?.self, NSString.self)
+    case is NSData.Type:
+        info = try fakeType(Data.self, NSData.self)
+    case is NSData?.Type:
+        info = try fakeType(Data?.self, NSData.self)
+    case is NSNumber.Type:
+        info = try fakeType(Decimal.self, NSNumber.self)
+    case is NSNumber?.Type:
+        info = try fakeType(Decimal?.self, NSNumber.self)
+    case is NSDate.Type:
+        info = try fakeType(Date.self, NSDate.self)
+    case is NSDate?.Type:
+        info = try fakeType(Date?.self, NSDate.self)
+    case is NSUUID.Type:
+        info = try fakeType(UUID.self, NSUUID.self)
+    case is NSUUID?.Type:
+        info = try fakeType(UUID?.self, NSUUID.self)
+    default:
+        info = try typeInfo(of: tinfo)
+    }
+    _infoCache[tname] = info
+    return info
+}
+
+/// replace type or generic type
+private func fakeType(_ rtype: Any.Type, _ ttype: Any.Type) throws -> TypeInfo {
+    var tinfo = try typeInfo(of: rtype)
+    if tinfo.kind == .optional {
+        tinfo.genericTypes = [ttype]
+    } else {
+        tinfo.type = ttype
+    }
+    return tinfo
 }
 
 @inlinable
@@ -54,10 +88,21 @@ func getColumnType(rawType: Any.Type) -> Database.ColumnType {
     case is NSDate.Type: fallthrough
     case is NSDate?.Type:
         return .datetime
+    case is NSDecimalNumber.Type: fallthrough
+    case is NSDecimalNumber?.Type: fallthrough
+    case is NSNumber.Type: fallthrough
+    case is NSNumber?.Type:
+        return .numeric
+    case is UUID.Type: fallthrough
+    case is UUID?.Type: fallthrough
+    case is NSUUID.Type: fallthrough
+    case is NSUUID?.Type: fallthrough
     case is Data.Type: fallthrough
     case is Data?.Type: fallthrough
     case is NSData.Type: fallthrough
     case is NSData?.Type: fallthrough
+    case is Decimal.Type: fallthrough
+    case is Decimal?.Type: fallthrough
     default:
         return .blob
     }

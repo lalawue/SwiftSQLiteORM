@@ -28,10 +28,14 @@ extension String: Primitive {}
 extension Data: Primitive {}
 
 extension NSNumber: Primitive {}
+//extension NSDecimalNumber: Primitive {} // for databaseValue was override by NSNumber
 extension NSString: Primitive {}
 extension NSData: Primitive {}
+extension Decimal: Primitive {}
 extension CGFloat: Primitive {}
 extension NSNull: Primitive {}
+
+fileprivate let _posixLocale = Locale(identifier: "en_US_POSIX")
 
 extension Primitive {
     init?(primitive: Primitive) {
@@ -129,10 +133,56 @@ extension Primitive {
             default:
                 r = "\(primitive)" as NSString
             }
+            
+        case is Decimal.Type:
+            if r != nil { break }
+            switch primitive {
+            case let v as String: // GRDB's Decimal databaseValue
+                r = Decimal(string: v, locale: _posixLocale)
+            default:
+                r = Decimal(string: "\(primitive)", locale: _posixLocale)
+            }
+
         case is NSNumber.Type:
             if r != nil { break }
             r = NSNumber(value: Double(primitive: primitive) ?? 0)
-
+            
+        case is UUID.Type:
+            if r != nil { break }
+            switch primitive {
+            case let v as String:
+                r = UUID(uuidString: v)
+            default:
+                r = UUID(uuidString: "\(primitive)")
+            }
+            
+        case is NSUUID.Type:
+            if r != nil { break }
+            switch primitive {
+            case let v as String:
+                r = NSUUID(uuidString: v)
+            default:
+                r = NSUUID(uuidString: "\(primitive)")
+            }
+            
+        case is Date.Type:
+            if r != nil { break }
+            switch primitive {
+            case let v as Double:
+                r = Date(timeIntervalSince1970: v)
+            default:
+                r = Date()
+            }
+            
+        case is NSDate.Type:
+            if r != nil { break }
+            switch primitive {
+            case let v as Double:
+                r = NSDate(timeIntervalSince1970: v)
+            default:
+                r = NSDate()
+            }
+            
         case let k as any LosslessStringConvertible.Type:
             if r != nil { break }
             switch primitive {

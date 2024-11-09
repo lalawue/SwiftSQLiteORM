@@ -32,7 +32,7 @@ struct BasicType: DBTableDef, Equatable {
     
     var bool: Bool
     var bool_opt: Bool?
-    
+
     var int: Int
     var int8: Int8
     var int16: Int16
@@ -49,20 +49,28 @@ struct BasicType: DBTableDef, Equatable {
     var double: Double
 
     var string: String
-    //var nsstring: NSString
-    
+    var nsstring: NSString
+
     var data: Data
-    //var nsdata: NSData
-    
-    //var nsnumber: NSNumber
+    var nsdata: NSData
+
+    var nsnumber: NSNumber
     var cgfloat: CGFloat
+    
+    var decimal: Decimal
+
+//    var uuid: UUID
+//    var nsuuid: NSUUID
+//
+//    var date: Date
+//    var nsdate: NSDate
     
     typealias ORMKey = Columns
     
     enum Columns: String, DBTableKey {
         case bool
         case bool_opt
-        
+
         case int
         case int8
         case int16
@@ -79,13 +87,22 @@ struct BasicType: DBTableDef, Equatable {
         case double
 
         case string
-        //case nsstring
-        
+        case nsstring
+
         case data
-        //case nsdata
-        
-        //case nsnumber
+        case nsdata
+
+        case nsnumber
         case cgfloat
+        
+        case decimal
+
+//
+//        case uuid
+//        case nsuuid
+//
+//        case date
+//        case nsdate
     }
     
     mutating func changeCopy(_ block: (inout Self) -> Void) -> Self {
@@ -101,24 +118,32 @@ struct BasicType: DBTableDef, Equatable {
         let int16 = Int16(truncatingIfNeeded: arc4random())
         let int32 = Int32(truncatingIfNeeded: arc4random())
         let int64 = isTrue() ? Int64.max : Int64.min
-        
+
         let uint = UInt(truncatingIfNeeded: arc4random())
         let uint8 = UInt8(truncatingIfNeeded: arc4random())
         let uint16 = UInt16(truncatingIfNeeded: arc4random())
         let uint32 = UInt32(truncatingIfNeeded: arc4random())
         let uint64 = UInt64.max
-        
+
         let float = isTrue() ? Float.greatestFiniteMagnitude : (-Float(arc4random()) / 7)
         let double = isTrue() ? Double.greatestFiniteMagnitude : (-Double(arc4random()) / 7)
-        
+
         let string = "\(arc4random())"
-        //let nsstring = string as NSString
-        
+        let nsstring = string as NSString
+
         let data = "\(arc4random())".data(using: .utf8) ?? Data(repeating: 54, count: 16)
-        //let nsdata = data as NSData
-        
-        //let nsnumber = NSNumber(floatLiteral: double)
+        let nsdata = data as NSData
+
+        let nsnumber = NSNumber(floatLiteral: double)
         let cgfloat = CGFloat(floatLiteral: double)
+        
+        let decimal = isTrue() ? Decimal.greatestFiniteMagnitude : Decimal.leastFiniteMagnitude
+        
+//        let uuid = UUID()
+//        let nsuuid = NSUUID(uuidString: uuid.uuidString)!
+//
+//        let date = Date()
+//        let nsdate = NSDate(timeIntervalSince1970: date.timeIntervalSince1970)
         
         return BasicType(bool: bool,
                          bool_opt: orNil(bool),
@@ -135,17 +160,23 @@ struct BasicType: DBTableDef, Equatable {
                          float: float,
                          double: double,
                          string: string,
-//                         nsstring: nsstring,
+                         nsstring: nsstring,
                          data: data,
-                         //nsdata: nsdata,
-//                         nsnumber: nsnumber,
-                         cgfloat: cgfloat)
+                         nsdata: nsdata,
+                         nsnumber: nsnumber,
+                         cgfloat: cgfloat,
+                         decimal: decimal
+//                         uuid: uuid,
+//                         nsuuid: nsuuid,
+//                         date: date,
+//                         nsdate: nsdate
+        )
     }
     
     static func ==(lhs: BasicType, rhs: BasicType) -> Bool {
         return ((lhs.bool == rhs.bool) &&
-//                (lhs.bool_opt == rhs.bool_opt) &&
-                
+                (lhs.bool_opt == rhs.bool_opt) &&
+
                 (lhs.int == rhs.int) &&
                 (lhs.int8 == rhs.int8) &&
                 (lhs.int16 == rhs.int16) &&
@@ -160,19 +191,29 @@ struct BasicType: DBTableDef, Equatable {
 
                 (lhs.float == rhs.float) &&
                 (lhs.double == rhs.double) &&
-                
+
                 (lhs.string == rhs.string) &&
-//                (lhs.nsstring == rhs.nsstring) &&
-                
+                (lhs.nsstring == rhs.nsstring) &&
+
                 (lhs.data == rhs.data) &&
-//                (lhs.nsdata == rhs.nsdata) &&
+                (lhs.nsdata == rhs.nsdata) &&
+
+                (lhs.nsnumber == rhs.nsnumber) &&
+                (lhs.cgfloat == rhs.cgfloat) &&
                 
-//                (lhs.nsnumber == rhs.nsnumber) &&
-                (lhs.cgfloat == rhs.cgfloat))
+                (lhs.decimal == rhs.decimal)
+                
+//                (lhs.uuid == rhs.uuid) &&
+//                (lhs.nsuuid == rhs.nsuuid) &&
+//
+//                (lhs.date == rhs.date) &&
+//                (lhs.nsdate == rhs.nsdate)
+        )
     }
     
     func print() {
-        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), data:\(data), cgfloat:\(cgfloat)"
+        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal)"
+    //uuid:\(uuid) nsuuid:\(nsuuid) date:\(date) nsdate:\(nsdate)"
         NSLog(str)
     }
 }
@@ -194,18 +235,22 @@ class Tests: XCTestCase {
         let c = BasicType.randomValue()
         let u = BasicType.randomValue()
         
+        c.print()
+        
         do {
             tryBlock({ try DBMgnt.push([c, u] )})
         }
-        
+
         do {
             let c1 = tryBlock({ try DBMgnt.fetch(BasicType.self, .eq(.int, c.int)) }).first ?? u
             let u1 = tryBlock({ try DBMgnt.fetch(BasicType.self, .eq(.string, u.string)) }).first ?? c
-            
+
+            c1.print()
+
             XCTAssert(c1 == c, "Failed")
             XCTAssert(u1 == u, "Failed")
         }
-        
+
         do {
             tryBlock({ try DBMgnt.delete(BasicType.self, .eq(.int, c.int)) })
             let c1 = tryBlock({ try DBMgnt.fetch(BasicType.self, .eq(.int, c.int)) }).first ?? u
