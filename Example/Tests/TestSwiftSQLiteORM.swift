@@ -435,6 +435,13 @@ class Tests: XCTestCase {
             XCTAssert(u1 == u, "Failed")
         })
         
+        // in
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .in(.int, [123])).count
+            let u1 = try DBMgnt.fetch(BasicType.self, .in(.int, [123, 987])).count
+            XCTAssert(c1 == 1, "Failed")
+            XCTAssert(u1 == 2, "Failed")
+        })
         // between, .not
         tryBlock({
             let c1 = try DBMgnt.fetch(BasicType.self, .between(key: .decimal, 000, 555)).count

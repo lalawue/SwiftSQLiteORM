@@ -34,6 +34,9 @@ public struct DBRecordFilter<T: DBTableDef> {
         /// 'LIKE'
         case like(T.ORMKey, Any)
         
+        /// 'IN'
+        case `in`(T.ORMKey, [Any])
+                
         /// 'NOT'
         case not
         
@@ -89,6 +92,9 @@ public struct DBRecordFilter<T: DBTableDef> {
             case .like(let key, let value):
                 sql += " `\(key)` LIKE '\(_value(value))'"
                 needWhere = true
+            case .in(let key, let values):
+                sql += " `\(key.rawValue)` IN (\(values.map{"'\($0)'"}.joined(separator: ",")))"
+                needWhere = true
             case .not:
                 sql += " NOT"
             case .between(let key, let v1, let v2):
@@ -107,7 +113,7 @@ public struct DBRecordFilter<T: DBTableDef> {
             case ._raw(let str):
                 sql += str
             case ._key(let keys):
-                sql += " \(keys.map { "`\($0.rawValue)`"}.joined(separator: ", "))"
+                sql += " \(keys.map { "`\($0.rawValue)`"}.joined(separator: ","))"
                 needWhere = true
             }
         }
