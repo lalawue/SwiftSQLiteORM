@@ -89,11 +89,11 @@ private class DBTableRecord<T: DBTableDef>: Record {
                 } else {
                     col.notNull(onConflict: .abort)
                 }
-                //dbLog("create column '\(cname)' with '\(getColumnType(rawType: p.type))'")
+                dbLog("create column '\(cname)' with '\(getColumnType(rawType: p.type))'")
             }
             if cpname.isEmpty {
                 tbl.column("rowid", .integer).primaryKey(onConflict: .abort, autoincrement: true)
-                //dbLog("create column 'rowid'")
+                dbLog("create column 'rowid'")
             }
         })
     }

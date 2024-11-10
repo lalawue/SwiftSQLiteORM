@@ -323,6 +323,9 @@ class AnyDecoder {
                         break
                     }
                 }
+            } else if let dictionary = value as? [String : Any] {
+                let sub = try createObject(prop.type, from: dictionary)
+                try prop.set(value: sub, on: &object)
             }
         }
 

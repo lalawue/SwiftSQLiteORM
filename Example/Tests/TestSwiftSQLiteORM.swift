@@ -217,24 +217,83 @@ struct BasicType: DBTableDef, Equatable {
     }
 }
 
+// MARK: -
+
+struct PlainType2: Codable {
+    let pname2: String
+    let index2: Int
+}
+
+struct PlainType1: Codable {
+    let pname1: String
+    let pdata1: PlainType2
+}
+
+struct NestedType1: Codable {
+    let nname: String
+    let pdata: PlainType1
+}
+
+struct NestedType: DBTableDef, Equatable {
+    
+    let name: String
+    let ndata: NestedType1
+    
+    typealias ORMKey = columns
+    
+    enum columns: String, DBTableKey {
+        case name
+        case ndata
+    }
+    
+    static var primaryKey: ORMKey? {
+        return .name
+    }
+    
+    static func randomValue() -> NestedType {
+        let index = Int(arc4random())
+        let name = "\(index)"
+        return NestedType(name: name,
+                          ndata: NestedType1(nname: name,
+                                             pdata: PlainType1(pname1: name, pdata1: PlainType2(pname2: name, index2: index))))
+    }
+    
+    static func ==(lhs: NestedType, rhs: NestedType) -> Bool {
+        return ((lhs.name == rhs.name) &&
+                (lhs.ndata.nname == rhs.ndata.nname) &&
+                (lhs.ndata.pdata.pname1 == rhs.ndata.pdata.pname1) &&
+                (lhs.ndata.pdata.pdata1.pname2 == rhs.ndata.pdata.pdata1.pname2) &&
+                (lhs.ndata.pdata.pdata1.index2 == rhs.ndata.pdata.pdata1.index2))
+    }
+    
+    func print() {
+        NSLog("NestedType: \(name), \(ndata.nname), \(ndata.pdata.pname1), \(ndata.pdata.pdata1.pname2), \(ndata.pdata.pdata1.index2)")
+    }
+}
+
+// MARK: -
+
 class Tests: XCTestCase {
     
     override func setUp() {
         super.setUp()
         // Put setup code here. This method is called before the invocation of each test method in the class.
-        tryBlock({ try DBMgnt.clear(BasicType.self) })
+        tryBlock({
+            try DBMgnt.clear(BasicType.self)
+            try DBMgnt.clear(NestedType.self)
+        })
     }
     
     override func tearDown() {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
         super.tearDown()
     }
-    
-    func testBasicTypeCURD() {
+
+    func testBasicType() {
         let c = BasicType.randomValue()
         let u = BasicType.randomValue()
         
-        c.print()
+        //c.print()
         
         do {
             tryBlock({ try DBMgnt.push([c, u] )})
@@ -244,7 +303,7 @@ class Tests: XCTestCase {
             let c1 = tryBlock({ try DBMgnt.fetch(BasicType.self, .eq(.int, c.int)) }).first ?? u
             let u1 = tryBlock({ try DBMgnt.fetch(BasicType.self, .eq(.string, u.string)) }).first ?? c
 
-            c1.print()
+            //c1.print()
 
             XCTAssert(c1 == c, "Failed")
             XCTAssert(u1 == u, "Failed")
@@ -261,6 +320,48 @@ class Tests: XCTestCase {
             let all = tryBlock({ try DBMgnt.fetch(BasicType.self) })
             XCTAssert(all.count == 0, "Failed")
         }
+    }
+
+    func testNestedType() {
+        let c = NestedType.randomValue()
+        let u = NestedType.randomValue()
+        
+        c.print()
+        
+        do {
+            tryBlock({ try DBMgnt.push([c, u]) })
+        }
+        
+        do {
+            let c1 = tryBlock({ try DBMgnt.fetch(NestedType.self, .eq(.name, c.name)) }).first ?? u
+            let u1 = tryBlock({ try DBMgnt.fetch(NestedType.self, .eq(.name, u.name)) }).first ?? c
+            
+            c1.print()
+            
+            XCTAssert(c1 == c, "Failed")
+            XCTAssert(u1 == u, "Failed")
+        }
+        
+        do {
+            tryBlock({ try DBMgnt.delete(NestedType.self, .eq(.name, c.name)) })
+            let c1 = tryBlock({ try DBMgnt.fetch(NestedType.self, .eq(.name, c.name)) }).first ?? u
+            XCTAssert(c1 == u, "Failed")
+        }
+        
+        do {
+            tryBlock({ try DBMgnt.clear(NestedType.self) })
+            let all = tryBlock({ try DBMgnt.fetch(NestedType.self) })
+            XCTAssert(all.count == 0, "Failed")
+        }
+    }
+    
+    func testRecordFilter() {
+    }
+    
+    func testAddColumns() {
+    }
+
+    func testMultiThreadRW() {
     }
     
     func testPerformanceExample() {

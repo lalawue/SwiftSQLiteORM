@@ -14,8 +14,6 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        //let info = try! typeInfo(of: NSDecimalNumber.self)
-        //NSLog("info \(info)")
     }
 
     override func didReceiveMemoryWarning() {
