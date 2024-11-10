@@ -475,6 +475,65 @@ class Tests: XCTestCase {
     }
     
     func testAddColumns() {
+        
+        // first push 2 FakeType1 to database in orm_FakeType1_t table
+        do {
+            struct FakeType1: DBTableDef {
+                let name: String
+                typealias ORMKey = Columns
+                enum Columns: String, DBTableKey {
+                    case name
+                }
+            }
+
+            tryBlock({
+                try DBMgnt.clear(FakeType1.self)
+                try DBMgnt.push([FakeType1(name: "ft11"), FakeType1(name: "ft12")])
+                let count = try DBMgnt.fetch(FakeType1.self).count
+                XCTAssert(count == 2, "Failed")
+                
+                // do reset
+                try DBMgnt.reset(FakeType1.self)
+            })
+        }
+
+        // upgrade FakeType1 to FakeType2, add 'index' column
+        do {
+            struct FakeType1: DBTableDef {
+                let name: String
+                var index: Int
+                typealias ORMKey = Column
+                enum Column: String, DBTableKey {
+                    case name
+                    case index
+                }
+                static var tableVersion: Double {
+                    return 1
+                }
+                static func ormUpdateNew(_ value: inout FakeType1) -> FakeType1 {
+                    if value.name.hasPrefix("ft1") {
+                        value.index = 1
+                    }
+                    return value
+                }
+            }
+            
+            tryBlock({
+                let arr = try DBMgnt.fetch(FakeType1.self, .orderBy([.name], .ASC))
+                XCTAssert(arr.count == 2, "Failed")
+                XCTAssert(arr[0].name == "ft11" && arr[0].index == 1, "Failed")
+                XCTAssert(arr[1].name == "ft12" && arr[1].index == 1, "Failed")
+            })
+            
+            tryBlock({
+                try DBMgnt.push([FakeType1(name: "ft21", index: 2), FakeType1(name: "ft22", index: 2)])
+                let arr = try DBMgnt.fetch(FakeType1.self, .like(.name, "ft2%"), .orderBy([.name], .ASC))
+                XCTAssert(arr.count == 2, "Failed")
+                XCTAssert(arr[0].name == "ft21" && arr[0].index == 2, "Failed")
+                XCTAssert(arr[1].name == "ft22" && arr[1].index == 2, "Failed")
+                try DBMgnt.reset(FakeType1.self)
+            })
+        }
     }
 
     func testMultiThreadRW() {

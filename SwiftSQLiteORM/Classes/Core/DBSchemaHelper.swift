@@ -80,4 +80,12 @@ class DBSchemaHelper {
             try sdef._push(db: db, values: [sdata])
         })
     }
+    
+    static func dropSchema<T: DBTableDef>(_ def: T.Type) throws {
+        let tname = def.tableName
+        try DBEngine.write(DBSchemaTable.self, { db in
+            try db.execute(sql: "DROP TABLE `\(tname)`")
+            _schemaCache[tname] = nil
+        })
+    }
 }

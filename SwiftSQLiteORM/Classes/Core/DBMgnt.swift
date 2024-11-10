@@ -40,6 +40,11 @@ final public class DBMgnt {
         try shared._clear(def)
     }
     
+    /// drop table
+    public static func drop<T: DBTableDef>(_ def: T.Type) throws {
+        try shared._drop(def)
+    }
+    
     // MARK: -
     
     private static let shared = DBMgnt()
@@ -93,6 +98,17 @@ final public class DBMgnt {
         try DBEngine.write(def, {
             try def._clear(db: $0)
         })
+    }
+    
+    private func _drop<T: DBTableDef>(_ def: T.Type) throws {
+        let tname = def.tableName
+        guard let _ = Self._flagCache[tname] else {
+            return
+        }
+        try DBSchemaHelper.dropSchema(def)
+        Self._flagCache[tname] = nil
+        rtTypeClear(of: def)
+        ormNameMappingClear(def)
     }
     
     /// record whether table was checked

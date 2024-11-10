@@ -123,6 +123,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
                 } else {
                     col.defaults(to: NSNull())
                 }
+                dbLog("add column '\(cname)'")
             }
         })
     }

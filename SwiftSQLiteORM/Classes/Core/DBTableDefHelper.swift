@@ -9,8 +9,6 @@ import Runtime
 
 private let _nameSet = Set<String>(["primaryKey", "tableName", "tableVersion", "databaseName"])
 
-private let _p2cCache = DBCache<[String:String]>()
-
 /// TableDef helper
 extension DBTableDef {
 
@@ -27,17 +25,8 @@ extension DBTableDef {
 
     /// get ORMKey property name mapping
     /// - property name -> column name
+    @inline(__always)
     static func _nameMapping() -> [String:String] {
-        let tname = Self.tableName
-        if let p2c = _p2cCache[tname]  {
-            return p2c
-        } else {
-            var p2c: [String:String] = [:]
-            ORMKey.allCases.forEach {
-                p2c["\($0)"] = $0.rawValue
-            }
-            _p2cCache[tname] = p2c
-            return p2c
-        }
+        return ormNameMapping(Self.self)
     }
 }

@@ -45,6 +45,30 @@ func rtTypeInfo(of tinfo: Any.Type) throws -> TypeInfo {
     return info
 }
 
+func rtTypeClear(of tinfo: Any.Type) {
+    _infoCache["\(tinfo)"] = nil
+}
+
+private let _p2cCache = DBCache<[String:String]>()
+
+func ormNameMapping<T: DBTableDef>(_ def: T.Type) -> [String: String] {
+    let tname = def.tableName
+    if let p2c = _p2cCache[tname]  {
+        return p2c
+    } else {
+        var p2c: [String:String] = [:]
+        def.ORMKey.allCases.forEach {
+            p2c["\($0)"] = $0.rawValue
+        }
+        _p2cCache[tname] = p2c
+        return p2c
+    }
+}
+
+func ormNameMappingClear<T: DBTableDef>(_ def: T.Type) {
+    _p2cCache[def.tableName] = nil
+}
+
 /// replace type or generic type
 private func fakeType(_ rtype: Any.Type, _ ttype: Any.Type) throws -> TypeInfo {
     var tinfo = try typeInfo(of: rtype)
