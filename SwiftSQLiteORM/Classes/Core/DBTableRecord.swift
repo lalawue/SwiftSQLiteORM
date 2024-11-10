@@ -53,6 +53,12 @@ extension DBTableDef {
     static func _clear(db: Database) throws {
         try db.execute(sql: "DELETE FROM `\(Self.tableName)`")
     }
+
+    /// drop table
+    @inline(__always)
+    static func _drop(db: Database) throws {
+        try db.execute(sql: "DROP TABLE `\(Self.tableName)`")
+    }
 }
 
 /// GRDB Record encode & decode, column names mapping
@@ -89,11 +95,11 @@ private class DBTableRecord<T: DBTableDef>: Record {
                 } else {
                     col.notNull(onConflict: .abort)
                 }
-                dbLog("create column '\(cname)' with '\(getColumnType(rawType: p.type))'")
+                //dbLog("create column '\(cname)' with '\(getColumnType(rawType: p.type))'")
             }
             if cpname.isEmpty {
                 tbl.column("rowid", .integer).primaryKey(onConflict: .abort, autoincrement: true)
-                dbLog("create column 'rowid'")
+                //dbLog("create column 'rowid'")
             }
         })
     }
@@ -123,7 +129,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
                 } else {
                     col.defaults(to: NSNull())
                 }
-                dbLog("add column '\(cname)'")
+                //dbLog("add column '\(cname)'")
             }
         })
     }

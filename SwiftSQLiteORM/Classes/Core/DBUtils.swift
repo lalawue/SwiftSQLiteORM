@@ -52,7 +52,7 @@ func rtTypeClear(of tinfo: Any.Type) {
 private let _p2cCache = DBCache<[String:String]>()
 
 func ormNameMapping<T: DBTableDef>(_ def: T.Type) -> [String: String] {
-    let tname = def.tableName
+    let tname = "\(def)"
     if let p2c = _p2cCache[tname]  {
         return p2c
     } else {
@@ -66,7 +66,7 @@ func ormNameMapping<T: DBTableDef>(_ def: T.Type) -> [String: String] {
 }
 
 func ormNameMappingClear<T: DBTableDef>(_ def: T.Type) {
-    _p2cCache[def.tableName] = nil
+    _p2cCache["\(def)"] = nil
 }
 
 /// replace type or generic type

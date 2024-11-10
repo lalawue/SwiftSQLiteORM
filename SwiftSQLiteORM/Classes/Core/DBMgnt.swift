@@ -101,12 +101,11 @@ final public class DBMgnt {
     }
     
     private func _drop<T: DBTableDef>(_ def: T.Type) throws {
-        let tname = def.tableName
-        guard let _ = Self._flagCache[tname] else {
-            return
-        }
         try DBSchemaHelper.dropSchema(def)
-        Self._flagCache[tname] = nil
+        Self._flagCache["\(def)"] = nil
+        try DBEngine.write(def, {
+            try def._drop(db: $0)
+        })
         rtTypeClear(of: def)
         ormNameMappingClear(def)
     }
@@ -116,8 +115,7 @@ final public class DBMgnt {
     
     /// create or alter table if needed
     private static func _checkTable<T: DBTableDef>(_ def: T.Type) throws {
-        let tname = def.tableName
-        
+        let tname = "\(def)" // trick it for table name
         if let _ = _flagCache[tname] {
             return
         }
