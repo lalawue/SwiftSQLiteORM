@@ -34,17 +34,11 @@ public struct DBRecordFilter<T: DBTableDef> {
         /// 'LIKE'
         case like(T.ORMKey, Any)
         
-        /// 'IN'
-        case `in`([Any])
-        
         /// 'NOT'
         case not
         
         /// 'BETWEEN (_, _)'
-        case between(Any, Any)
-        
-        /// 'GROUP BY (...) HAVING ...'
-        case groupBy([T.ORMKey], _ having: String = "")
+        case between(key: T.ORMKey? = nil, Any, Any)
         
         /// 'ORDER BY []'
         case orderBy([T.ORMKey], OrderBy? = nil)
@@ -53,7 +47,10 @@ public struct DBRecordFilter<T: DBTableDef> {
         case limit(Int)
         
         /// insert raw SQL string
-        case raw(String)
+        case _raw(String)
+
+        /// insert ORMKey
+        case _key([T.ORMKey])
     }
     
     public enum OrderBy: String {
@@ -67,34 +64,39 @@ public struct DBRecordFilter<T: DBTableDef> {
         if array.isEmpty {
             return ""
         }
-        var sql = " WHERE"
+        var needWhere = false
+        var sql = ""
         array.forEach { op in
             switch op {
             case .eq(let key, let value):
-                sql += " `\(key.rawValue)` = '\(value)'"
+                sql += " `\(key.rawValue)` = '\(_value(value))'"
+                needWhere = true
             case .neq(let key, let value):
-                sql += " `\(key.rawValue)` != '\(value)'"
+                sql += " `\(key.rawValue)` != '\(_value(value))'"
+                needWhere = true
             case .gt(let key, let value):
-                sql += " `\(key.rawValue)` > '\(value)'"
+                sql += " `\(key.rawValue)` > '\(_value(value))'"
+                needWhere = true
             case .gte(let key, let value):
-                sql += " `\(key.rawValue)` >= '\(value)'"
+                sql += " `\(key.rawValue)` >= '\(_value(value))'"
+                needWhere = true
             case .lt(let key, let value):
-                sql += " `\(key.rawValue)` < '\(value)'"
+                sql += " `\(key.rawValue)` < '\(_value(value))'"
+                needWhere = true
             case .lte(let key, let value):
-                sql += " `\(key.rawValue)` <= '\(value)'"
+                sql += " `\(key.rawValue)` <= '\(_value(value))'"
+                needWhere = true
             case .like(let key, let value):
-                sql += " `\(key)` LIKE \(value)"
-            case .in(let values):
-                sql += " IN (\(values.map{"\($0)"}.joined(separator: ",")))"
+                sql += " `\(key)` LIKE '\(_value(value))'"
+                needWhere = true
             case .not:
                 sql += " NOT"
-            case .between(let v1, let v2):
-                sql += " BETWEEN \(v1) AND \(v2)"
-            case .groupBy(let keys, let having):
-                sql += " GROUP BY \(keys.map{ "`\($0.rawValue)`" }.joined(separator: ","))"
-                if !having.isEmpty {
-                    sql += " HAVING \(having)"
+            case .between(let key, let v1, let v2):
+                if let k = key {
+                    sql += " `\(k.rawValue)`"
                 }
+                sql += " BETWEEN '\(v1)' AND '\(v2)'"
+                needWhere = true
             case .orderBy(let keys, let seq):
                 sql += " ORDER BY \(keys.map{ "`\($0.rawValue)`" }.joined(separator: ","))"
                 if let seq = seq {
@@ -102,10 +104,27 @@ public struct DBRecordFilter<T: DBTableDef> {
                 }
             case .limit(let num):
                 sql += " LIMIT \(num)"
-            case .raw(let str):
+            case ._raw(let str):
                 sql += str
+            case ._key(let keys):
+                sql += " \(keys.map { "`\($0.rawValue)`"}.joined(separator: ", "))"
+                needWhere = true
             }
         }
+        if needWhere {
+            sql = " WHERE" + sql
+        }
         return sql
+    }
+    
+    private static func _value(_ value: Any) -> Any {
+        switch value {
+        case let v as Date:
+            return v.databaseValue
+        case let v as NSDate:
+            return v.databaseValue
+        default:
+            return value
+        }
     }
 }

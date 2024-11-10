@@ -104,13 +104,7 @@ struct BasicType: DBTableDef, Equatable {
         case nsdate
     }
     
-    mutating func changeCopy(_ block: (inout Self) -> Void) -> Self {
-        var v = self
-        block(&v)
-        return v
-    }
-    
-    static func randomValue() -> Self {
+    static func randomValue(_ block: ((inout Self) -> Void)? = nil) -> Self {
         let bool = isTrue()
         let int = Int(truncatingIfNeeded: arc4random())
         let int8 = Int8(truncatingIfNeeded: arc4random())
@@ -144,32 +138,34 @@ struct BasicType: DBTableDef, Equatable {
         let date = Date()
         let nsdate = NSDate(timeIntervalSince1970: date.timeIntervalSince1970)
         
-        return BasicType(bool: bool,
-                         bool_opt: nil,
-                         int: int,
-                         int8: int8,
-                         int16: int16,
-                         int32: int32,
-                         int64: int64,
-                         uint: uint,
-                         uint8: uint8,
-                         uint16: uint16,
-                         uint32: uint32,
-                         uint64: uint64,
-                         float: float,
-                         double: double,
-                         string: string,
-                         nsstring: nsstring,
-                         data: data,
-                         nsdata: nsdata,
-                         nsnumber: nsnumber,
-                         cgfloat: cgfloat,
-                         decimal: decimal,
-                         uuid: uuid,
-                         nsuuid: nsuuid,
-                         date: date,
-                         nsdate: nsdate
+        var ret = BasicType(bool: bool,
+                            bool_opt: nil,
+                            int: int,
+                            int8: int8,
+                            int16: int16,
+                            int32: int32,
+                            int64: int64,
+                            uint: uint,
+                            uint8: uint8,
+                            uint16: uint16,
+                            uint32: uint32,
+                            uint64: uint64,
+                            float: float,
+                            double: double,
+                            string: string,
+                            nsstring: nsstring,
+                            data: data,
+                            nsdata: nsdata,
+                            nsnumber: nsnumber,
+                            cgfloat: cgfloat,
+                            decimal: decimal,
+                            uuid: uuid,
+                            nsuuid: nsuuid,
+                            date: date,
+                            nsdate: nsdate
         )
+        block?(&ret)
+        return ret
     }
     
     static func ==(lhs: BasicType, rhs: BasicType) -> Bool {
@@ -356,6 +352,119 @@ class Tests: XCTestCase {
     }
     
     func testRecordFilter() {
+        
+        tryBlock({
+            try DBMgnt.clear(BasicType.self)
+            let count = try DBMgnt.fetch(BasicType.self).count
+            XCTAssert(count == 0, "Failed")
+        })
+        
+        let c = BasicType.randomValue({
+            $0.int = 123
+            $0.float = 456
+            $0.string = "789"
+            $0.data = "987".data(using: .utf8)!
+            $0.nsnumber = NSNumber(value: 654)
+            $0.decimal = 321
+        })
+        
+        let u = BasicType.randomValue({
+            $0.int = 987
+            $0.float = 654
+            $0.string = "321"
+            $0.data = "123".data(using: .utf8)!
+            $0.nsnumber = NSNumber(value: 456)
+            $0.decimal = 789
+        })
+        
+        tryBlock({ try DBMgnt.push([c, u]) })
+        
+        // eq
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .eq(.int, c.int)).first ?? u
+            let u1 = try DBMgnt.fetch(BasicType.self, .eq(.int, u.int)).first ?? c
+            XCTAssert(c1 == c, "Failed")
+            XCTAssert(u1 == u, "Failed")
+        })
+        
+        // neq
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .neq(.string, c.string)).first ?? c
+            let u1 = try DBMgnt.fetch(BasicType.self, .neq(.decimal, u.int)).first ?? u
+            XCTAssert(c1 == u, "Failed")
+            XCTAssert(u1 == c, "Failed")
+        })
+        
+        // gt
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .gt(.int, c.int)).first ?? c
+            let u1 = try DBMgnt.fetch(BasicType.self, .gt(.nsnumber, u.nsnumber)).first ?? u
+            XCTAssert(c1 == u, "Failed")
+            XCTAssert(u1 == c, "Failed")
+        })
+        
+        // gte
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .gte(.int, c.int)).count
+            let u1 = try DBMgnt.fetch(BasicType.self, .gte(.nsnumber, u.nsnumber)).count
+            XCTAssert(c1 == 2, "Failed")
+            XCTAssert(u1 == 2, "Failed")
+        })
+        
+        // lt
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .lt(.int, u.int)).first ?? u
+            let u1 = try DBMgnt.fetch(BasicType.self, .lt(.nsnumber, c.nsnumber)).first ?? c
+            XCTAssert(c1 == c, "Failed")
+            XCTAssert(u1 == u, "Failed")
+        })
+        
+        // lte
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .lte(.int, u.int)).count
+            let u1 = try DBMgnt.fetch(BasicType.self, .lte(.nsnumber, c.nsnumber)).count
+            XCTAssert(c1 == 2, "Failed")
+            XCTAssert(u1 == 2, "Failed")
+        })
+        
+        // like
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .like(.int, c.int)).first ?? u
+            let u1 = try DBMgnt.fetch(BasicType.self, .like(.nsnumber, u.nsnumber)).first ?? c
+            XCTAssert(c1 == c, "Failed")
+            XCTAssert(u1 == u, "Failed")
+        })
+        
+        // between, .not
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .between(key: .decimal, 000, 555)).count
+            let u1 = try DBMgnt.fetch(BasicType.self, ._key([.int]), .not, .between(000, 999)).count
+            XCTAssert(c1 == 1, "Failed")
+            XCTAssert(u1 == 0, "Failed")
+            NSLog("ucount: \(u1)")
+        })
+        
+        // order by
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .orderBy([.int], .ASC)).first ?? u
+            let u1 = try DBMgnt.fetch(BasicType.self, .orderBy([.decimal], .DESC)).first ?? c
+            XCTAssert(c1 == c, "Failed")
+            XCTAssert(u1 == u, "Failed")
+        })
+
+        // limit
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, .limit(1)).count
+            XCTAssert(c1 == 1, "Failed")
+        })
+        
+        // raw
+        tryBlock({
+            let c1 = try DBMgnt.fetch(BasicType.self, ._raw(" WHERE `string` = '321'")).first ?? c
+            let u1 = try DBMgnt.fetch(BasicType.self, .gt(.int, 0), ._raw(" AND `decimal` > '555'")).first ?? c
+            XCTAssert(c1 == u, "Failed")
+            XCTAssert(u1 == u, "Failed")
+        })
     }
     
     func testAddColumns() {
