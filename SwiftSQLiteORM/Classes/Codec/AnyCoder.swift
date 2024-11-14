@@ -9,14 +9,14 @@ import Foundation
 import Runtime
 
 class AnyEncoder {
-    class func encode<T: DBTableDef>(_ any: T) throws -> [String: Primitive] {
+    class func encode<T: DBTableDef>(pcmap: [String:String], _ any: T) throws -> [String: Primitive] {
         guard let temp = reflect(any) as? [String: Any] else {
             throw EncodingError.invalidEncode(any)
         }
-        let tset = T._reservedNameSet()
+        let cset = Set<String>(pcmap.values)
         var encoded: [String: Primitive] = [:]
         for (key, value) in temp {
-            if tset.contains(key) {
+            guard cset.contains(key) else {
                 continue
             }
             switch value {
@@ -37,11 +37,11 @@ class AnyEncoder {
         return encoded
     }
 
-    class func encode<T: DBTableDef>(_ values: [T]) -> [[String: Primitive]] {
+    class func encode<T: DBTableDef>(pcmap: [String:String], _ values: [T]) -> [[String: Primitive]] {
         var array = [[String: Primitive]]()
         for value in values {
             do {
-                let encoded = try encode(value)
+                let encoded = try encode(pcmap: pcmap, value)
                 array.append(encoded)
             } catch _ {
                 array.append([:])

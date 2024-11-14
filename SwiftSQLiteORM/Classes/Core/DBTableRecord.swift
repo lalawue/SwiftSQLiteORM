@@ -156,7 +156,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
 
     /// transform to record then insert / update
     static func push(db: Database, values: [T]) throws {
-        try AnyEncoder.encode(values).map({
+        try AnyEncoder.encode(pcmap: T._nameMapping(), values).map({
             DBTableRecord<T>(row: _emptyRow, pvs: $0)
         }).forEach { try $0.performSave(db) }
     }

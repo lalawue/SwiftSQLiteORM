@@ -205,17 +205,11 @@ extension AnyDecoder {
         } else {
             genericType = type
         }
-        let tset: Set<String>
-        if let def = type as? any DBTableDef.Type {
-            tset = def._reservedNameSet()
-        } else {
-            tset = Self.emptySet
-        }
         var object = try xCreateInstance(of: genericType)
         for prop in info.properties {
-            if prop.name.isEmpty || tset.contains(prop.name) { continue }
-            guard let cname = pcmap[prop.name] else { continue }
-            guard let value = row[cname] else { continue }
+            guard let cname = pcmap[prop.name], let value = row[cname] else {
+                continue
+            }
             let xinfo = try rtTypeInfo(of: prop.type)
             var did = false
             if let xval = value as? Primitive {
