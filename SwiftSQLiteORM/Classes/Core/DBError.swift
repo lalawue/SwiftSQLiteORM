@@ -15,4 +15,6 @@ public enum DBORMError: Error {
     case FailedToGetTypeInfo
 
     case FailedToOperateWithoutPrimaryKey
+    
+    case FailedToOperateWithProperty(tname: String, pname: String, errmsg: String)
 }

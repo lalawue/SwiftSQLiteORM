@@ -156,9 +156,88 @@ private class DBTableRecord<T: DBTableDef>: Record {
 
     /// transform to record then insert / update
     static func push(db: Database, values: [T]) throws {
-        try AnyEncoder.encode(pcmap: T._nameMapping(), values).map({
-            DBTableRecord<T>(row: _emptyRow, pvs: $0)
-        }).forEach { try $0.performSave(db) }
+        let p2c = T._nameMapping()
+        try values.compactMap { vt -> DBTableRecord<T>? in
+            guard var info = T._typeInfo() else {
+                return nil
+            }
+            let genericType: Any.Type
+            if info.kind == .optional {
+                guard info.genericTypes.count == 1 else {
+                    return nil
+                }
+                genericType = info.genericTypes.first!
+                info = try rtTypeInfo(of: genericType)
+            } else {
+                genericType = info.type
+            }
+            info = try rtTypeInfo(of: genericType)
+            //
+            var pvs = [String:Primitive]()
+            try info.properties.forEach { vp in
+                guard let _ = p2c[vp.name] else {
+                    return
+                }
+                let v = try vp.get(from: vt)
+                if let v1 = try getValue(v) {
+                    pvs[vp.name] = v1
+                }
+            }
+            return DBTableRecord<T>(row: _emptyRow, pvs: pvs)
+        }.forEach {
+            try $0.performSave(db)
+        }
+        
+//        try AnyEncoder.encode(pcmap: T._nameMapping(), values).map({
+//            DBTableRecord<T>(row: _emptyRow, pvs: $0)
+//        }).forEach { try $0.performSave(db) }
+    }
+    
+    private static func getValue(_ v: Any) throws -> Primitive? {
+        switch v {
+        case let v1 as Primitive:
+            if let v1 = v1 as? UInt64 {
+                return Int64(bitPattern: v1)
+            } else {
+                return v1
+            }
+        case let v1 as Optional<Any>:
+            switch v1 {
+            case .none:
+                return nil
+            case .some(let v2):
+                switch v2 {
+                case let v3 as Primitive:
+                    if let v3 = v3 as? UInt64 {
+                        return Int64(bitPattern: v3)
+                    } else {
+                        return v3
+                    }
+                default:
+                    do {
+                        if let v2 = v2 as? Codable {
+                            let data = try JSONEncoder().encode(v2)
+                            return String(bytes: data.bytes)
+                        } else {
+                            return nil
+                        }
+                    } catch {
+                        throw DBORMError.FailedToOperateWithProperty(tname: "\(v2)", pname: "name", errmsg: error.localizedDescription)
+                    }
+                }
+            }
+        default:
+            do {
+                if let v = v as? Codable {
+                    let data = try JSONEncoder().encode(v)
+                    return String(bytes: data.bytes)
+                } else {
+                    return nil
+                }
+            } catch {
+                throw DBORMError.FailedToOperateWithProperty(tname: "\(v)", pname: "name", errmsg: error.localizedDescription)
+            }
+        }
     }
 
     /// delete record with Primary Key -> Value
