@@ -136,7 +136,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
     
     /// fetch row to instance
     static func fetch(db: Database, sql: String) throws -> [T] {
-        dbLog("(\(T.databaseName)) fetch sql: '\(sql)'")
+        //dbLog("(\(T.databaseName)) fetch sql: '\(sql)'")
         guard let records = try? fetchAll(db, sql: sql) as? [Self],
               records.count > 0 else
         {

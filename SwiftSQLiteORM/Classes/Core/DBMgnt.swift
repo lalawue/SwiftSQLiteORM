@@ -25,7 +25,7 @@ final public class DBMgnt {
         try shared._push(values)
     }
     
-    /// delete entries with [T]
+    /// delete entries with [T], require PrimaryKey
     public static func deletes<T: DBTableDef>(_ values: [T]) throws {
         try shared._deletes(values)
     }
@@ -75,7 +75,7 @@ final public class DBMgnt {
             return
         }
         guard let _ = T.primaryKey else {
-            throw DBORMError.OnlySupportWithPrimaryKey
+            throw DBORMError.FailedToOperateWithoutPrimaryKey
         }
         try Self._checkTable(T.self)
         try DBEngine.write(T.self, {

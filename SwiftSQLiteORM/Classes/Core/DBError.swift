@@ -2,7 +2,7 @@
 //  DBError.swift
 //  SwiftSQLiteORM
 //
-//  Created by lii on 2024/11/9.
+//  Created by lalawue on 2024/11/9.
 //
 
 import Foundation
@@ -14,5 +14,5 @@ public enum DBORMError: Error {
     
     case FailedToGetTypeInfo
 
-    case OnlySupportWithPrimaryKey
+    case FailedToOperateWithoutPrimaryKey
 }

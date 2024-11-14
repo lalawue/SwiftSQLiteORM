@@ -538,13 +538,141 @@ class Tests: XCTestCase {
     }
 
     func testMultiThreadRW() {
+        let tcount = 6
+        var varray = Array<BasicType>()
+        
+        while varray.count < tcount {
+            varray.append(BasicType.randomValue({
+                $0.decimal = Decimal(tcount - varray.count)
+            }))
+        }
+        
+        print("fill with varray: \(varray.count)")
+        
+        // clear all data first
+        tryBlock({
+            try DBMgnt.clear(BasicType.self)
+        })
+        
+        var tarray = Array<Thread>()
+        while tarray.count < tcount {
+            let tindex = tarray.count
+            tarray.append(Thread(block: {
+                var run_times = 0
+                while run_times < 2000 {
+                    run_times += 1
+                    if run_times % 100 == 0 {
+                        print("ThreadRW[\(tindex)] run times: \(run_times)")
+                    }
+                    let vindex = Int(arc4random()) % tcount
+                    switch arc4random() % 3 {
+                    case 0:
+                        let _ = tryBlock({ try DBMgnt.fetch(BasicType.self, .eq(.decimal, varray[vindex].decimal)) })
+                    case 1:
+                        tryBlock({ try DBMgnt.push([varray[vindex]]) })
+                    default:
+                        tryBlock({ try DBMgnt.delete(BasicType.self, .eq(.decimal, varray[vindex].decimal)) })
+                    }
+                }
+            }))
+        }
+        
+        // start all threads
+        tarray.forEach {
+            $0.start()
+        }
+        
+        // waiting all finished
+        while true {
+            var finished_count = 0
+            tarray.forEach {
+                finished_count += ($0.isFinished ? 1 : 0)
+            }
+            if finished_count == tcount {
+                break
+            }
+            usleep(1)
+        }
+        
+        // check result
+        tryBlock({
+            var vindex = 0
+            while vindex < varray.count {
+                if let v = try DBMgnt.fetch(BasicType.self, .eq(.decimal, varray[vindex].decimal)).first {
+                    XCTAssert(v == varray[vindex], "Failed")
+                    print("varray[\(vindex)] checked")
+                } else {
+                    print("varray[\(vindex)] deleted")
+                }
+                vindex += 1
+            }
+            
+            // clear all data
+            try DBMgnt.clear(BasicType.self)
+        })
     }
     
     func testPerformanceExample() {
         // This is an example of a performance test case.
-        self.measure() {
-            // Put the code you want to measure the time of here.
+
+        // clear all first
+        tryBlock({
+            try DBMgnt.clear(BasicType.self)
+        })
+        
+        var varray = Array<BasicType>()
+        while varray.count < 500 {
+            varray.append(BasicType.randomValue())
         }
+        
+        print("start measure multiple times")
+        
+        var s1array = Array<TimeInterval>()
+        var s2array = Array<TimeInterval>()
+        var s3array = Array<TimeInterval>()
+        
+        var run_times: TimeInterval = 0
+        let start_ti = Date().timeIntervalSince1970
+        
+        self.measure() {
+            
+            run_times += 1
+            print("start loop: \(run_times)")
+            
+            let s1 = Date().timeIntervalSince1970
+            
+            tryBlock({
+                try DBMgnt.push(varray)
+            })
+            
+            let s2 = Date().timeIntervalSince1970
+            s1array.append(s2 - s1)
+        
+            tryBlock({
+                let _ = try DBMgnt.fetch(BasicType.self)
+            })
+            
+            let s3 = Date().timeIntervalSince1970
+            s2array.append(s3 - s2)
+        
+            tryBlock({
+                try DBMgnt.delete(BasicType.self)
+            })
+            
+            let s4 = Date().timeIntervalSince1970
+            s3array.append(s4 - s3)
+        }
+        
+        let end_ti = Date().timeIntervalSince1970
+
+        let v1 = Decimal(0)
+        print("end measure, each loop: \((end_ti - start_ti)/run_times), push: \(s1array._sumDiv(run_times)), fetch: \(s2array._sumDiv(run_times)), delete: \(s3array._sumDiv(run_times))")
     }
+}
+
+extension Array where Element == Double {
     
+    fileprivate func _sumDiv(_ div: Double) -> Decimal {
+        return Decimal(self.reduce(0, { $0 + $1 }) / div)
+    }
 }

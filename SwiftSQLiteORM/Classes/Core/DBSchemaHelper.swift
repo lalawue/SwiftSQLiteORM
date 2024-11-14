@@ -81,6 +81,7 @@ class DBSchemaHelper {
         })
     }
     
+    /// drop table schema
     static func dropSchema<T: DBTableDef>(_ def: T.Type) throws {
         let tname = def.tableName
         let sdef = DBSchemaTable.self

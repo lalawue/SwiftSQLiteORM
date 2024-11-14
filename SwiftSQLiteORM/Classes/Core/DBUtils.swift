@@ -8,6 +8,19 @@
 import GRDB
 import Runtime
 
+@inlinable
+func dbLog(isError: Bool = false, _ text: String) {
+    if isError {
+        print("[SQLiteORM.Err] \(text)")
+    } else {
+#if DEBUG
+        print("[SQLiteORM.Info] \(text)")
+#endif
+    }
+}
+
+// MARK: - Type Info
+
 private let _infoCache = DBCache<TypeInfo>()
 
 /// cache type info if needed
@@ -49,6 +62,19 @@ func rtTypeClear(of tinfo: Any.Type) {
     _infoCache["\(tinfo)"] = nil
 }
 
+/// replace type or generic type
+private func fakeType(_ rtype: Any.Type, _ ttype: Any.Type) throws -> TypeInfo {
+    var tinfo = try typeInfo(of: rtype)
+    if tinfo.kind == .optional {
+        tinfo.genericTypes = [ttype]
+    } else {
+        tinfo.type = ttype
+    }
+    return tinfo
+}
+
+// MARK: - Name Mapping
+
 private let _p2cCache = DBCache<[String:String]>()
 
 func ormNameMapping<T: DBTableDef>(_ def: T.Type) -> [String: String] {
@@ -69,27 +95,7 @@ func ormNameMappingClear<T: DBTableDef>(_ def: T.Type) {
     _p2cCache["\(def)"] = nil
 }
 
-/// replace type or generic type
-private func fakeType(_ rtype: Any.Type, _ ttype: Any.Type) throws -> TypeInfo {
-    var tinfo = try typeInfo(of: rtype)
-    if tinfo.kind == .optional {
-        tinfo.genericTypes = [ttype]
-    } else {
-        tinfo.type = ttype
-    }
-    return tinfo
-}
-
-@inlinable
-func dbLog(isError: Bool = false, _ text: String) {
-    if isError {
-        print("[SQLiteORM.Err] \(text)")
-    } else {
-#if DEBUG
-        print("[SQLiteORM.Info] \(text)")
-#endif
-    }
-}
+// MARK: Column Type
 
 func getColumnType(rawType: Any.Type) -> Database.ColumnType {
     switch rawType {
@@ -176,6 +182,7 @@ extension Primitive {
 
 extension AnyDecoder {
     
+    /// decode from GRDB's ROW
     class func decode<T: DBTableDef>(_ type: T.Type,
                                      _ pcmap: [String:String],
                                      from row: Row) throws -> T

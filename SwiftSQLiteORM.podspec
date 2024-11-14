@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'SwiftSQLiteORM'
-  s.version          = '0.1.0'
+  s.version          = '0.1.20241114'
   s.summary          = 'A short description of SwiftSQLiteORM.'
 
 # This description is used to generate tags and improve search results.
