@@ -61,15 +61,30 @@ extension DBTableDef {
     }
 }
 
+private let _emptyRow = Row()
+private let _emptyPVs = [String:Primitive]()
+
 /// GRDB Record encode & decode, column names mapping
 private class DBTableRecord<T: DBTableDef>: Record {
+
+    /// instance from fetch operation
+    private let _obj: T?
     
-   /// GRDB row data
-    private(set) var row = Row()
+    /// property name -> value from push / delete operation
+    private let _pvs: [String:Primitive]
     
-    required init(row: Row) {
-        self.row = row.copy()
+    required init(row: Row, pvs: [String:Primitive]) {
+        if row == _emptyRow {
+            self._obj = nil
+        } else {
+            self._obj = try? AnyDecoder.decode(T.self, T._nameMapping(), from: row)
+        }
+        self._pvs = pvs
         super.init(row: row)
+    }
+    
+    required convenience init(row: Row) {
+        self.init(row: row, pvs: _emptyPVs)
     }
     
     static func createTable(db: Database) throws {
@@ -137,35 +152,30 @@ private class DBTableRecord<T: DBTableDef>: Record {
     /// fetch row to instance
     static func fetch(db: Database, sql: String) throws -> [T] {
         //dbLog("(\(T.databaseName)) fetch sql: '\(sql)'")
-        guard let records = try? fetchAll(db, sql: sql) as? [Self],
-              records.count > 0 else
-        {
+        guard let arr = try? fetchAll(db, sql: sql) as? [Self], arr.count > 0 else {
             return []
         }
-        return try records.map({
-            try AnyDecoder.decode(T.self, T._nameMapping(), from: $0.row)
-        })
+        return arr.compactMap({ $0._obj })
     }
 
     /// transform to record then insert / update
     static func push(db: Database, values: [T]) throws {
         try AnyEncoder.encode(values).map({
-            DBTableRecord<T>(row: Row($0._remapKeys(T._nameMapping())))
-        }).forEach { try $0.save(db) }
+            DBTableRecord<T>(row: _emptyRow, pvs: $0)
+        }).forEach { try $0.performSave(db) }
     }
 
     /// transform to record then delete
     static func deletes(db: Database, values: [T]) throws {
         try AnyEncoder.encode(values).map({
-            DBTableRecord<T>(row: Row($0._remapKeys(T._nameMapping())))
-        }).forEach { try $0.delete(db) }
+            DBTableRecord<T>(row: _emptyRow, pvs: $0)
+        }).forEach { let _ = try $0.performDelete(db) }
     }
         
     /// insert / update row to database
     override func encode(to container: inout PersistenceContainer) {
-        let r = self.row
         T._nameMapping().forEach { (pname, cname) in
-            container[cname] = r[cname]
+            container[cname] = _pvs[pname]
         }
     }
     
