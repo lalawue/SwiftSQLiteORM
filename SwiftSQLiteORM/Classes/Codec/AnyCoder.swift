@@ -53,6 +53,21 @@ class AnyEncoder {
     class func reflect<T: DBTableDef>(_ any: T) -> Any? {
         return reflect(element: any)
     }
+    
+    /// get primary key value in depth 0
+    class func reflectPrimaryValue<T: DBTableDef>(_ any: T) -> Any? {
+        guard let cname = T.primaryKey?.rawValue else {
+            return nil
+        }
+        let mirror = Mirror(reflecting: any)
+        let p2c = T._nameMapping()
+        for (label, value) in mirror.children {
+            if let pname = label, let cname1 = p2c[pname], cname1 == cname {
+                return value
+            }
+        }
+        return nil
+    }
 
     // MARK: - Private
 

@@ -351,6 +351,32 @@ class Tests: XCTestCase {
         }
     }
     
+    func testDeleteValue() {
+        struct CheckDelete: DBTableDef {
+            let value: Int
+            static var primaryKey: ORMKey? {
+                return .value
+            }
+            typealias ORMKey = Columns
+            enum Columns: String, DBTableKey {
+                case value
+            }
+            static func randomValue() -> CheckDelete {
+                return CheckDelete(value: Int(arc4random()))
+            }
+        }
+        
+        let tcount = 128
+        let values = stride(from: 0, to: tcount, by: 1).map({ _ in CheckDelete.randomValue() })
+        
+        tryBlock({
+            try DBMgnt.push(values)
+            try DBMgnt.deletes(values)
+            let rets = try DBMgnt.fetch(CheckDelete.self)
+            XCTAssert(rets.count == 0, "Failed")
+        })
+    }
+    
     func testRecordFilter() {
         
         tryBlock({
@@ -665,7 +691,6 @@ class Tests: XCTestCase {
         
         let end_ti = Date().timeIntervalSince1970
 
-        let v1 = Decimal(0)
         print("end measure, each loop: \((end_ti - start_ti)/run_times), push: \(s1array._sumDiv(run_times)), fetch: \(s2array._sumDiv(run_times)), delete: \(s3array._sumDiv(run_times))")
     }
 }

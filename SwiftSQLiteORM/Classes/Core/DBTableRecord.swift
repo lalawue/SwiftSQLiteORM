@@ -63,6 +63,7 @@ extension DBTableDef {
 
 private let _emptyRow = Row()
 private let _emptyPVs = [String:Primitive]()
+private let _emptyArgs = StatementArguments()
 
 /// GRDB Record encode & decode, column names mapping
 private class DBTableRecord<T: DBTableDef>: Record {
@@ -152,7 +153,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
     /// fetch row to instance
     static func fetch(db: Database, sql: String) throws -> [T] {
         //dbLog("(\(T.databaseName)) fetch sql: '\(sql)'")
-        guard let arr = try? fetchAll(db, sql: sql) as? [Self], arr.count > 0 else {
+        guard let arr = try? fetchAll(db, sql: sql, arguments: _emptyArgs) as? [Self], arr.count > 0 else {
             return []
         }
         return arr.compactMap({ $0._obj })
@@ -165,11 +166,14 @@ private class DBTableRecord<T: DBTableDef>: Record {
         }).forEach { try $0.performSave(db) }
     }
 
-    /// transform to record then delete
+    /// delete record with Primary Key -> Value
     static func deletes(db: Database, values: [T]) throws {
-        try AnyEncoder.encode(values).map({
-            DBTableRecord<T>(row: _emptyRow, pvs: $0)
-        }).forEach { let _ = try $0.performDelete(db) }
+        let pvalues = values.compactMap({ AnyEncoder.reflectPrimaryValue($0) })
+        if pvalues.count > 0 {
+            let sql = "DELETE FROM `\(T.tableName)` WHERE `\(T.primaryKey!.rawValue)` IN (\(pvalues.map { _ in "?"}.joined(separator: ",")))"
+            let statement = try db.makeStatement(sql: sql)
+            try statement.execute(arguments: StatementArguments(pvalues))
+        }
     }
         
     /// insert / update row to database
