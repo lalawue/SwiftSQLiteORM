@@ -48,12 +48,6 @@ extension DBTableDef {
     static func _delete(db: Database, options: [DBRecordFilter<Self>.Operator]) throws {
         try db.execute(sql: "DELETE FROM `\(Self.tableName)`" + DBRecordFilter<Self>.sqlConditions(options))
     }
-    
-    /// clear all entry in table
-    @inline(__always)
-    static func _clear(db: Database) throws {
-        try db.execute(sql: "DELETE FROM `\(Self.tableName)`")
-    }
 
     /// drop table
     @inline(__always)

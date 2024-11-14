@@ -37,7 +37,7 @@ final public class DBMgnt {
     
     /// delete all entries
     public static func clear<T: DBTableDef>(_ def: T.Type) throws {
-        try shared._clear(def)
+        try shared._delete(def, _emptyOptions as! [DBRecordFilter<T>.Operator])
     }
     
     /// drop table
@@ -84,19 +84,9 @@ final public class DBMgnt {
     }
     
     private func _delete<T: DBTableDef>(_ def: T.Type, _ options: [DBRecordFilter<T>.Operator]) throws {
-        if options.isEmpty {
-            return
-        }
         try Self._checkTable(def)
         try DBEngine.write(def, {
             try def._delete(db: $0, options: options)
-        })
-    }
-    
-    private func _clear<T: DBTableDef>(_ def: T.Type) throws {
-        try Self._checkTable(def)
-        try DBEngine.write(def, {
-            try def._clear(db: $0)
         })
     }
     
@@ -112,6 +102,7 @@ final public class DBMgnt {
     
     /// record whether table was checked
     private static let _flagCache = DBCache<Bool>()
+    private static let _emptyOptions = [Any]()
     
     /// create or alter table if needed
     private static func _checkTable<T: DBTableDef>(_ def: T.Type) throws {
