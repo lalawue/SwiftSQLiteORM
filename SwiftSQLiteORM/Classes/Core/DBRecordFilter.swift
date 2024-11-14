@@ -43,8 +43,11 @@ public struct DBRecordFilter<T: DBTableDef> {
         /// 'BETWEEN (_, _)'
         case between(key: T.ORMKey? = nil, Any, Any)
         
-        /// 'ORDER BY []'
-        case orderBy([T.ORMKey], OrderBy? = nil)
+        /// 'ORDER BY'
+        case orderBy(T.ORMKey, OrderBy? = nil)
+
+        /// 'ORDER BY keys'
+        case orderByKeys(_ krs: [(T.ORMKey, OrderBy?)])
         
         /// LIMIT
         case limit(Int)
@@ -68,6 +71,7 @@ public struct DBRecordFilter<T: DBTableDef> {
             return ""
         }
         var needWhere = false
+        var needOrderBy = true
         var sql = ""
         array.forEach { op in
             switch op {
@@ -103,10 +107,27 @@ public struct DBRecordFilter<T: DBTableDef> {
                 }
                 sql += " BETWEEN '\(v1)' AND '\(v2)'"
                 needWhere = true
-            case .orderBy(let keys, let seq):
-                sql += " ORDER BY \(keys.map{ "`\($0.rawValue)`" }.joined(separator: ","))"
+            case .orderBy(let key, let seq):
+                if needOrderBy {
+                    needOrderBy = false
+                    sql += " ORDER BY"
+                }
+                sql +=  " `\(key.rawValue)`"
                 if let seq = seq {
                     sql += " \(seq.rawValue)"
+                }
+            case .orderByKeys(let krs):
+                if krs.count > 0 {
+                    if needOrderBy {
+                        needOrderBy = true
+                        sql += " ORDER BY"
+                    }
+                    krs.forEach { (key, seq) in
+                        sql += " `\(key.rawValue)`"
+                        if let seq = seq {
+                            sql += " \(seq.rawValue)"
+                        }
+                    }
                 }
             case .limit(let num):
                 sql += " LIMIT \(num)"

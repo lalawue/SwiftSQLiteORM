@@ -39,7 +39,8 @@ extension DBTableDef {
     /// delete GRDB record from value indicator
     @inline(__always)
     static func _deletes(db: Database, values: [Self]) throws {
-        try DBTableRecord<Self>.deletes(db: db, values: values)
+        let primaryValues = values.compactMap({ AnyEncoder.reflectPrimaryValue($0) })
+        try DBTableRecord<Self>.deletes(db: db, primaryValues: primaryValues)
     }
     
     /// delete GRDB record from option filter
@@ -167,16 +168,12 @@ private class DBTableRecord<T: DBTableDef>: Record {
     }
 
     /// delete record with Primary Key -> Value
-    static func deletes(db: Database, values: [T]) throws {
-        let pvalues = values.compactMap({ AnyEncoder.reflectPrimaryValue($0) })
-        if pvalues.count > 0 {
-            let sql = "DELETE FROM `\(T.tableName)` WHERE `\(T.primaryKey!.rawValue)` IN (\(pvalues.map { _ in "?"}.joined(separator: ",")))"
-            let statement = try db.makeStatement(sql: sql)
-            try statement.execute(arguments: StatementArguments(pvalues))
-        }
+    static func deletes(db: Database, primaryValues: [Any]) throws {
+        let sql = "DELETE FROM `\(T.tableName)`" + DBRecordFilter<T>.sqlConditions([.in(T.primaryKey!, primaryValues)])
+        try db.execute(sql: sql)
     }
         
-    /// insert / update row to database
+    /// insert / update
     override func encode(to container: inout PersistenceContainer) {
         T._nameMapping().forEach { (pname, cname) in
             container[cname] = _pvs[pname]

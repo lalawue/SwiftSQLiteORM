@@ -479,8 +479,8 @@ class Tests: XCTestCase {
         
         // order by
         tryBlock({
-            let c1 = try DBMgnt.fetch(BasicType.self, .orderBy([.int], .ASC)).first ?? u
-            let u1 = try DBMgnt.fetch(BasicType.self, .orderBy([.decimal], .DESC)).first ?? c
+            let c1 = try DBMgnt.fetch(BasicType.self, .orderBy(.int, .ASC)).first ?? u
+            let u1 = try DBMgnt.fetch(BasicType.self, .orderByKeys([(.decimal, .DESC)])).first ?? c
             XCTAssert(c1 == c, "Failed")
             XCTAssert(u1 == u, "Failed")
         })
@@ -548,7 +548,7 @@ class Tests: XCTestCase {
         }
         
         tryBlock({
-            let arr = try DBMgnt.fetch(FakeType2.self, .orderBy([.name], .ASC))
+            let arr = try DBMgnt.fetch(FakeType2.self, .orderBy(.name, .ASC))
             XCTAssert(arr.count == 2, "Failed")
             XCTAssert(arr[0].name == "ft11" && arr[0].index == 1, "Failed")
             XCTAssert(arr[1].name == "ft12" && arr[1].index == 1, "Failed")
@@ -556,7 +556,7 @@ class Tests: XCTestCase {
         
         tryBlock({
             try DBMgnt.push([FakeType2(name: "ft21", index: 2), FakeType2(name: "ft22", index: 2)])
-            let arr = try DBMgnt.fetch(FakeType2.self, .like(.name, "ft2%"), .orderBy([.name], .ASC))
+            let arr = try DBMgnt.fetch(FakeType2.self, .like(.name, "ft2%"), .orderBy(.name, .ASC))
             XCTAssert(arr.count == 2, "Failed")
             XCTAssert(arr[0].name == "ft21" && arr[0].index == 2, "Failed")
             XCTAssert(arr[1].name == "ft22" && arr[1].index == 2, "Failed")
@@ -638,7 +638,7 @@ class Tests: XCTestCase {
         })
     }
     
-    func testPerformanceExample() {
+    func testPerformance() {
         // This is an example of a performance test case.
 
         // clear all first
