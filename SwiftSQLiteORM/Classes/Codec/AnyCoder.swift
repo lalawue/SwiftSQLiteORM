@@ -161,8 +161,9 @@ class AnyEncoder {
             value(for: $0.value, depth: depth)
         }
     }
-
-    private class func value(forEnum item: Any) -> Primitive {
+    */
+    
+    class func value(forEnum item: Any) -> Primitive {
         if let item = item as? (any RawRepresentable),
            let raw = item.rawValue as? Primitive {
             return raw
@@ -171,7 +172,6 @@ class AnyEncoder {
         let p2 = p1.withMemoryRebound(to: UInt8.self, capacity: 1) { $0 }
         return p2.pointee
     }
-    */
 }
 
 class AnyDecoder {

@@ -52,7 +52,11 @@ func rtTypeInfo(of tinfo: Any.Type) throws -> TypeInfo {
     case is NSUUID?.Type:
         info = try fakeType(UUID?.self, NSUUID.self)
     default:
-        info = try typeInfo(of: tinfo)
+        do {
+            info = try typeInfo(of: tinfo)
+        } catch {
+            throw DBORMError.FailedToGetTypeInfo(typeName: "\(tinfo.self)")
+        }
     }
     _infoCache[tname] = info
     return info
@@ -383,14 +387,14 @@ extension AnyEncoder {
             let pname = prop.name
             guard let cname = pcmap[pname] else { return }
             let v = try prop.get(from: value)
-            if let v1 = try AnyEncoder.encode(tname: tname, pname: pname, v) {
+            if let v1 = try AnyEncoder.encode(tname: tname, pname: pname, prop: prop, v) {
                 pvs[cname] = v1
             }
         })
     }
     
     /// with first level value only support Primitive or Encodable
-    private class func encode(tname: String, pname: String, _ val: Any) throws -> Primitive? {
+    private class func encode(tname: String, pname: String, prop: PropertyInfo, _ val: Any) throws -> Primitive? {
         switch val {
         case let pval as Primitive:
             if let pval = pval as? UInt64 {
@@ -411,10 +415,23 @@ extension AnyEncoder {
                         return spval
                     }
                 default:
-                    if let ocval = oval as? Codable {
+                    if let ocval = sval as? Codable {
                         let data = try JSONEncoder().encode(ocval)
                         return String(bytes: data.bytes)
-                    } else {
+                    }
+                    let sinfo = try propertyTypeInfo(tname: tname, pname: pname, type(of: sval))
+                    switch sinfo.kind {
+                    case .enum:
+                        return value(forEnum: sval)
+                    case .tuple:
+                        let arr = try sinfo.properties.reduce(into: [Primitive](), {
+                            if let v = try encode(tname: tname, pname: pname, prop: $1, try $1.get(from: sval)) {
+                                $0.append(v)
+                            }
+                        })
+                        let data = try JSONSerialization.data(withJSONObject: arr)
+                        return String(bytes: data.bytes)
+                   default:
                         throw DBORMError.FailedToEncodeProperty(typeName: tname, propertyName: pname)
                     }
                 }
@@ -423,9 +440,31 @@ extension AnyEncoder {
             if let cval = val as? Codable {
                 let data = try JSONEncoder().encode(cval)
                 return String(bytes: data.bytes)
-            } else {
+            }
+            let info = try propertyTypeInfo(tname: tname, pname: pname, type(of: val))
+            switch info.kind {
+            case .enum:
+                return value(forEnum: val)
+            case .tuple:
+                let arr = try info.properties.reduce(into: [Primitive](), {
+                    if let v = try encode(tname: tname, pname: pname, prop: $1, try $1.get(from: val)) {
+                        $0.append(v)
+                    }
+                })
+                let data = try JSONSerialization.data(withJSONObject: arr)
+                return String(bytes: data.bytes)
+            default:
                 throw DBORMError.FailedToEncodeProperty(typeName: tname, propertyName: pname)
             }
+        }
+    }
+    
+    @inline(__always)
+    private class func propertyTypeInfo(tname: String, pname: String, _ tinfo: Any.Type) throws -> TypeInfo {
+        do {
+            return try rtTypeInfo(of: tinfo)
+        } catch {
+            throw DBORMError.FailedToEncodeProperty(typeName: tname, propertyName: pname)
         }
     }
 }

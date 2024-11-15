@@ -24,9 +24,17 @@ func tryBlock<T>(_ block: () throws -> T) -> T {
     do {
         return try block()
     } catch {
-        print(error.localizedDescription)
-        fatalError("failed to try block: \(error.localizedDescription)")
+        if let err = error as? DBORMError {
+            fatalError("failed to try block: \(err.localizedDescription)")
+        } else {
+            fatalError("failed to try block: \(error.localizedDescription)")
+        }
     }
+}
+
+enum BasicEnum: String {
+    case a = "aaa"
+    case b = "bbb"
 }
 
 struct BasicType: DBTableDef, Equatable {
@@ -66,6 +74,9 @@ struct BasicType: DBTableDef, Equatable {
     var date: Date
     var nsdate: NSDate
     
+    var benum: BasicEnum
+    var btuple: (a:Int, b:String)
+    
     typealias ORMKey = Columns
     
     enum Columns: String, DBTableKey {
@@ -103,6 +114,9 @@ struct BasicType: DBTableDef, Equatable {
 
         case date
         case nsdate
+        
+        case benum
+        case btuple
     }
     
     static func randomValue(_ block: ((inout Self) -> Void)? = nil) -> Self {
@@ -139,6 +153,9 @@ struct BasicType: DBTableDef, Equatable {
         let date = Date()
         let nsdate = NSDate(timeIntervalSince1970: date.timeIntervalSince1970)
         
+        let benum: BasicEnum = isTrue() ? .a : .b
+        let btuple: (a: Int, b: String) = (Int(arc4random()), "\(arc4random())")
+        
         var ret = BasicType(bool: bool,
                             bool_opt: nil,
                             int: int,
@@ -163,7 +180,9 @@ struct BasicType: DBTableDef, Equatable {
                             uuid: uuid,
                             nsuuid: nsuuid,
                             date: date,
-                            nsdate: nsdate
+                            nsdate: nsdate,
+                            benum: benum,
+                            btuple: btuple
         )
         block?(&ret)
         return ret
@@ -204,12 +223,15 @@ struct BasicType: DBTableDef, Equatable {
 
                 // GRDB will store date as "yyyy-MM-dd HH:mm:ss.SSS" in database
                 (lhs.date.databaseValue == rhs.date.databaseValue) &&
-                (lhs.nsdate.databaseValue == rhs.nsdate.databaseValue)
+                (lhs.nsdate.databaseValue == rhs.nsdate.databaseValue) &&
+                
+                (lhs.benum == rhs.benum) &&
+                ((lhs.btuple.a == rhs.btuple.a) && (lhs.btuple.b == rhs.btuple.b))
         )
     }
     
     func print() {
-        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal), uuid:\(uuid), nsuuid:\(nsuuid), date:\(date.timeIntervalSinceReferenceDate), nsdate:\(nsdate.timeIntervalSinceReferenceDate)"
+        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal), uuid:\(uuid), nsuuid:\(nsuuid), date:\(date.timeIntervalSinceReferenceDate), nsdate:\(nsdate.timeIntervalSinceReferenceDate) benum:\(benum.rawValue), btuple:(a:\(btuple.a),b:\(btuple.b)"
         NSLog(str)
     }
 }

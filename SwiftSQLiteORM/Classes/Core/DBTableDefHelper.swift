@@ -20,11 +20,7 @@ extension DBTableDef {
     /// get table definition properties
     @inline(__always)
     static func _typeInfo() throws -> TypeInfo {
-        do {
-            return try rtTypeInfo(of: Self.self)
-        } catch {
-            throw DBORMError.FailedToGetTypeInfo(typeName: "\(Self.self)")
-        }
+        return try rtTypeInfo(of: Self.self)
     }
 
     /// get ORMKey property name mapping
