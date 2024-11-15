@@ -374,6 +374,63 @@ class Tests: XCTestCase {
         }
     }
     
+    func testReadmeExample() {
+
+        // nested struct will store as JSON string
+        struct ExampleNested: Codable {
+            let desc: String
+            let index: Int
+        }
+
+        struct ExampleType: DBTableDef {
+            let name: String
+            let data: ExampleNested
+
+            typealias ORMKey = Columns
+            
+            /// keep blank or return nil for using hidden 'rowid' column
+            static var primaryKey: Columns? {
+                return .name
+            }
+            
+            enum Columns: String, DBTableKey {
+                case name
+                case data
+            }
+        }
+        
+        do {
+            // insert / update
+            let c = ExampleType(name: "c", data: ExampleNested(desc: "c", index: 1))
+            let u = ExampleType(name: "u", data: ExampleNested(desc: "u", index: 2))
+            try DBMgnt.push([c, u])
+            
+            // select
+            let arr = try DBMgnt.fetch(ExampleType.self, .eq(.name, c.name))
+            XCTAssert(arr.count == 1, "failed")
+            XCTAssert(arr[0].name == c.name, "failed")
+            
+            // delete
+            try DBMgnt.deletes([c]) // require primaryKey in table definition
+            try DBMgnt.delete(ExampleType.self, .eq(.name, u.name))
+            let count = try DBMgnt.fetch(ExampleType.self, .eq(.name, c.name)).count
+            XCTAssert(count == 0, "failed")
+            
+            // clear
+            try DBMgnt.clear(ExampleType.self)
+            
+            // drop table
+            try DBMgnt.drop(ExampleType.self)
+
+        } catch {
+            if let err = error as? DBORMError {
+                fatalError("failed to try block: \(err.localizedDescription)")
+            } else {
+                fatalError("failed to try block: \(error.localizedDescription)")
+            }
+        }
+    }
+    
     func testInvalidType() {
         struct InvalidType: DBTableDef {
             let name: String

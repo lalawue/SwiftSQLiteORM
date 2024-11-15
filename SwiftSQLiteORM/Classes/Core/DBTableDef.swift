@@ -23,13 +23,13 @@ public protocol DBTableDef {
     static var tableName: String { get }
     
     /// schema version for table columns, default 0
-    /// - increase this number after you add columns
+    /// - increase version after you add columns
     static var tableVersion: Double { get }
     
     /// specify database file name or use default
     static var databaseName: String { get }
 
-    /// update  instance property value created by type reflection
+    /// update instance property value created by type reflection
     /// - only ORMKey covered property can restore value from database column
     /// - others property will use default value
     static func ormUpdateNew(_ value: inout Self) -> Self

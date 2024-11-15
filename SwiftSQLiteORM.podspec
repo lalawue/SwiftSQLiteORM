@@ -8,8 +8,8 @@
 
 Pod::Spec.new do |s|
   s.name             = 'SwiftSQLiteORM'
-  s.version          = '0.1.20241114'
-  s.summary          = 'A short description of SwiftSQLiteORM.'
+  s.version          = '0.1.20241116'
+  s.summary          = 'Swift ORM Protocol build on GRDB.swift/SQLCipher'
 
 # This description is used to generate tags and improve search results.
 #   * Think: What does it do? Why did you write it? What is the focus?
@@ -18,7 +18,7 @@ Pod::Spec.new do |s|
 #   * Finally, don't worry about the indent, CocoaPods strips it!
 
   s.description      = <<-DESC
-TODO: Add long description of the pod here.
+Swift ORM Protocol build on GRDB.swift/SQLCipher, will auto create and connect database file, create or alter table schema, mapping value between instance property and table column
                        DESC
 
   s.homepage         = 'https://github.com/lalawue/SwiftSQLiteORM'
