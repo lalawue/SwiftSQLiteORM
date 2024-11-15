@@ -24,6 +24,7 @@ func tryBlock<T>(_ block: () throws -> T) -> T {
     do {
         return try block()
     } catch {
+        print(error.localizedDescription)
         fatalError("failed to try block: \(error.localizedDescription)")
     }
 }
@@ -351,6 +352,32 @@ class Tests: XCTestCase {
         }
     }
     
+    func testInvalidType() {
+        struct InvalidType: DBTableDef {
+            let name: String
+            let value: NSLock
+            typealias ORMKey = Columns
+            enum Columns: String, DBTableKey {
+                case name = "cname"
+                case value = "cvalue"
+            }
+        }
+        let c = InvalidType(name: "c", value: NSLock())
+        let u = InvalidType(name: "u", value: NSLock())
+        do {
+            try DBMgnt.push([c, u])
+        } catch {
+            print("success catch error: \((error as? DBORMError)?.localizedDescription ?? "-")")
+            switch error {
+            case DBORMError.FailedToEncodeProperty(let typeName, let propertyName):
+                XCTAssert(typeName == "\(InvalidType.self)")
+                XCTAssert(propertyName == "value")
+            default:
+                XCTAssert(false, "Failed")
+            }
+        }
+    }
+    
     func testDeleteValue() {
         struct CheckDelete: DBTableDef {
             let value: Int
@@ -626,9 +653,9 @@ class Tests: XCTestCase {
             while vindex < varray.count {
                 if let v = try DBMgnt.fetch(BasicType.self, .eq(.decimal, varray[vindex].decimal)).first {
                     XCTAssert(v == varray[vindex], "Failed")
-                    print("varray[\(vindex)] checked")
+                    print("varray[\(vindex)] > checked")
                 } else {
-                    print("varray[\(vindex)] deleted")
+                    print("varray[\(vindex)] - deleted")
                 }
                 vindex += 1
             }
@@ -640,6 +667,8 @@ class Tests: XCTestCase {
     
     func testPerformance() {
         // This is an example of a performance test case.
+        
+        let tcount = 500
 
         // clear all first
         tryBlock({
@@ -647,11 +676,11 @@ class Tests: XCTestCase {
         })
         
         var varray = Array<BasicType>()
-        while varray.count < 500 {
+        while varray.count < tcount {
             varray.append(BasicType.randomValue())
         }
         
-        print("start measure multiple times")
+        print("start measure multiple times for \(tcount) items")
         
         var s1array = Array<TimeInterval>()
         var s2array = Array<TimeInterval>()
@@ -691,7 +720,7 @@ class Tests: XCTestCase {
         
         let end_ti = Date().timeIntervalSince1970
 
-        print("end measure, each loop: \((end_ti - start_ti)/run_times), push: \(s1array._sumDiv(run_times)), fetch: \(s2array._sumDiv(run_times)), delete: \(s3array._sumDiv(run_times))")
+        print("end measure, \(tcount) items each loop: \((end_ti - start_ti)/run_times), push: \(s1array._sumDiv(run_times)), fetch: \(s2array._sumDiv(run_times)), delete: \(s3array._sumDiv(run_times))")
     }
 }
 

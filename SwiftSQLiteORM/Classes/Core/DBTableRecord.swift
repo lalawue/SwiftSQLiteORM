@@ -52,12 +52,12 @@ extension DBTableDef {
     /// drop table
     @inline(__always)
     static func _drop(db: Database) throws {
-        try db.execute(sql: "DROP TABLE `\(Self.tableName)`")
+        try db.execute(sql: "DROP TABLE IF EXISTS `\(Self.tableName)`")
     }
 }
 
 private let _emptyRow = Row()
-private let _emptyPVs = [String:Primitive]()
+private let _emptyCVs = [String:Primitive]()
 private let _emptyArgs = StatementArguments()
 
 /// GRDB Record encode & decode, column names mapping
@@ -66,27 +66,25 @@ private class DBTableRecord<T: DBTableDef>: Record {
     /// instance from fetch operation
     private let _obj: T?
     
-    /// property name -> value from push / delete operation
-    private let _pvs: [String:Primitive]
+    /// column name -> value from push / delete operation
+    private let _cvs: [String:Primitive]
     
-    required init(row: Row, pvs: [String:Primitive]) {
+    required init(row: Row, cvs: [String:Primitive]) {
         if row == _emptyRow {
             self._obj = nil
         } else {
             self._obj = try? AnyDecoder.decode(T.self, T._nameMapping(), from: row)
         }
-        self._pvs = pvs
+        self._cvs = cvs
         super.init(row: row)
     }
     
     required convenience init(row: Row) {
-        self.init(row: row, pvs: _emptyPVs)
+        self.init(row: row, cvs: _emptyCVs)
     }
     
     static func createTable(db: Database) throws {
-        guard let pinfo = T._typeInfo() else {
-            throw DBORMError.FailedToGetTypeInfo
-        }
+        let pinfo = try T._typeInfo()
         let p2c = T._nameMapping()
         var cpname = ""
         if let pname = T.primaryKey, let cname = p2c["\(pname)"] {
@@ -125,11 +123,9 @@ private class DBTableRecord<T: DBTableDef>: Record {
         guard newColumns.count > 0 else {
             return
         }
+        let pinfo = try T._typeInfo()
         let nset = Set(newColumns)
         try db.alter(table: T.tableName, body: { tbl in
-            guard let pinfo = T._typeInfo() else {
-                return
-            }
             pinfo.properties.forEach { p in
                 guard let cname = p2c[p.name], nset.contains(p.name) else {
                     return
@@ -156,88 +152,9 @@ private class DBTableRecord<T: DBTableDef>: Record {
 
     /// transform to record then insert / update
     static func push(db: Database, values: [T]) throws {
-        let p2c = T._nameMapping()
-        try values.compactMap { vt -> DBTableRecord<T>? in
-            guard var info = T._typeInfo() else {
-                return nil
-            }
-            let genericType: Any.Type
-            if info.kind == .optional {
-                guard info.genericTypes.count == 1 else {
-                    return nil
-                }
-                genericType = info.genericTypes.first!
-                info = try rtTypeInfo(of: genericType)
-            } else {
-                genericType = info.type
-            }
-            info = try rtTypeInfo(of: genericType)
-            //
-            var pvs = [String:Primitive]()
-            try info.properties.forEach { vp in
-                guard let _ = p2c[vp.name] else {
-                    return
-                }
-                let v = try vp.get(from: vt)
-                if let v1 = try getValue(v) {
-                    pvs[vp.name] = v1
-                }
-            }
-            return DBTableRecord<T>(row: _emptyRow, pvs: pvs)
-        }.forEach {
-            try $0.performSave(db)
-        }
-        
-//        try AnyEncoder.encode(pcmap: T._nameMapping(), values).map({
-//            DBTableRecord<T>(row: _emptyRow, pvs: $0)
-//        }).forEach { try $0.performSave(db) }
-    }
-    
-    private static func getValue(_ v: Any) throws -> Primitive? {
-        switch v {
-        case let v1 as Primitive:
-            if let v1 = v1 as? UInt64 {
-                return Int64(bitPattern: v1)
-            } else {
-                return v1
-            }
-        case let v1 as Optional<Any>:
-            switch v1 {
-            case .none:
-                return nil
-            case .some(let v2):
-                switch v2 {
-                case let v3 as Primitive:
-                    if let v3 = v3 as? UInt64 {
-                        return Int64(bitPattern: v3)
-                    } else {
-                        return v3
-                    }
-                default:
-                    do {
-                        if let v2 = v2 as? Codable {
-                            let data = try JSONEncoder().encode(v2)
-                            return String(bytes: data.bytes)
-                        } else {
-                            return nil
-                        }
-                    } catch {
-                        throw DBORMError.FailedToOperateWithProperty(tname: "\(v2)", pname: "name", errmsg: error.localizedDescription)
-                    }
-                }
-            }
-        default:
-            do {
-                if let v = v as? Codable {
-                    let data = try JSONEncoder().encode(v)
-                    return String(bytes: data.bytes)
-                } else {
-                    return nil
-                }
-            } catch {
-                throw DBORMError.FailedToOperateWithProperty(tname: "\(v)", pname: "name", errmsg: error.localizedDescription)
-            }
-        }
+        try AnyEncoder.encode(values).map({
+            DBTableRecord<T>(row: _emptyRow, cvs: $0)
+        }).forEach { try $0.performSave(db) }
     }
 
     /// delete record with Primary Key -> Value
@@ -248,8 +165,8 @@ private class DBTableRecord<T: DBTableDef>: Record {
         
     /// insert / update
     override func encode(to container: inout PersistenceContainer) {
-        T._nameMapping().forEach { (pname, cname) in
-            container[cname] = _pvs[pname]
+        T._nameMapping().forEach { (_, cname) in
+            container[cname] = _cvs[cname]
         }
     }
     

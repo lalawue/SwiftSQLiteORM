@@ -9,6 +9,7 @@ import Foundation
 import Runtime
 
 class AnyEncoder {
+    /*
     class func encode<T: DBTableDef>(pcmap: [String:String], _ any: T) throws -> [String: Primitive] {
         guard let temp = reflect(any) as? [String: Any] else {
             throw EncodingError.invalidEncode(any)
@@ -53,6 +54,7 @@ class AnyEncoder {
     class func reflect<T: DBTableDef>(_ any: T) -> Any? {
         return reflect(element: any)
     }
+    */
     
     /// get primary key value in depth 0
     class func reflectPrimaryValue<T: DBTableDef>(_ any: T) -> Any? {
@@ -70,6 +72,8 @@ class AnyEncoder {
     }
 
     // MARK: - Private
+    
+    /*
 
     private class func reflect<T: DBTableDef>(element: T) -> Any? {
         guard let result = value(for: element, depth: 0) else {
@@ -167,6 +171,7 @@ class AnyEncoder {
         let p2 = p1.withMemoryRebound(to: UInt8.self, capacity: 1) { $0 }
         return p2.pointee
     }
+    */
 }
 
 class AnyDecoder {

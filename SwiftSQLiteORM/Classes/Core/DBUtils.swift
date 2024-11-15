@@ -193,6 +193,7 @@ extension AnyDecoder {
         return result
     }
     
+    /// row version, for row's key is column name
     class func createObject(_ type: Any.Type, _ pcmap: [String:String], from row: Row) throws -> Any {
         var info = try rtTypeInfo(of: type)
         let genericType: Any.Type
@@ -345,5 +346,86 @@ extension AnyDecoder {
     @inlinable
     class func objUpdateNew<T: DBTableDef>(_ value: inout T) -> T {
         return T.ormUpdateNew(&value)
+    }
+}
+
+extension AnyEncoder {
+    
+    /// using Runtime but SDK's mirror to encode value to [column_name : value]
+    class func encode<T: DBTableDef>(_ values: [T]) throws -> [[String: Primitive]] {
+        var info = try T._typeInfo()
+        let genericType: Any.Type
+        if info.kind == .optional {
+            guard info.genericTypes.count == 1 else {
+                throw EncodingError.invalidType(type: info.type)
+            }
+            genericType = info.genericTypes.first!
+            info = try rtTypeInfo(of: genericType)
+        } else {
+            genericType = info.type
+        }
+        info = try rtTypeInfo(of: genericType)
+        //
+        let tname = "\(T.self)"
+        let pcmap = T._nameMapping()
+        return try values.reduce(into: [[String: Primitive]](), { (array, value) in
+            let encoded = try encode(tname: tname, pcmap: pcmap, value: value, info: info)
+            array.append(encoded)
+        })
+    }
+    
+    private class func encode<T: DBTableDef>(tname: String,
+                                             pcmap: [String:String],
+                                             value: T,
+                                             info: TypeInfo) throws -> [String: Primitive]
+    {
+        return try info.properties.reduce(into: [String:Primitive](), { (pvs, prop) in
+            let pname = prop.name
+            guard let cname = pcmap[pname] else { return }
+            let v = try prop.get(from: value)
+            if let v1 = try AnyEncoder.encode(tname: tname, pname: pname, v) {
+                pvs[cname] = v1
+            }
+        })
+    }
+    
+    /// with first level value only support Primitive or Encodable
+    private class func encode(tname: String, pname: String, _ val: Any) throws -> Primitive? {
+        switch val {
+        case let pval as Primitive:
+            if let pval = pval as? UInt64 {
+                return Int64(bitPattern: pval)
+            } else {
+                return pval
+            }
+        case let oval as Optional<Any>:
+            switch oval {
+            case .none:
+                return nil
+            case .some(let sval):
+                switch sval {
+                case let spval as Primitive:
+                    if let spval = spval as? UInt64 {
+                        return Int64(bitPattern: spval)
+                    } else {
+                        return spval
+                    }
+                default:
+                    if let ocval = oval as? Codable {
+                        let data = try JSONEncoder().encode(ocval)
+                        return String(bytes: data.bytes)
+                    } else {
+                        throw DBORMError.FailedToEncodeProperty(typeName: tname, propertyName: pname)
+                    }
+                }
+            }
+        default:
+            if let cval = val as? Codable {
+                let data = try JSONEncoder().encode(cval)
+                return String(bytes: data.bytes)
+            } else {
+                throw DBORMError.FailedToEncodeProperty(typeName: tname, propertyName: pname)
+            }
+        }
     }
 }

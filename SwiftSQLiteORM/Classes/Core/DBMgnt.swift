@@ -75,7 +75,7 @@ final public class DBMgnt {
             return
         }
         guard let _ = T.primaryKey else {
-            throw DBORMError.FailedToOperateWithoutPrimaryKey
+            throw DBORMError.FailedToOperateWithoutPrimaryKey(typeName: "\(T.self)")
         }
         try Self._checkTable(T.self)
         try DBEngine.write(T.self, {
