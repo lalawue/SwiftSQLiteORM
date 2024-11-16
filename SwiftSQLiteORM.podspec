@@ -29,7 +29,7 @@ Swift ORM Protocol build on GRDB.swift/SQLCipher, will auto create and connect d
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
   s.ios.deployment_target = '10.0'
-
+  s.swift_versions   = '5.0'
   s.source_files = 'SwiftSQLiteORM/Classes/**/*'
   
   # s.resource_bundles = {
