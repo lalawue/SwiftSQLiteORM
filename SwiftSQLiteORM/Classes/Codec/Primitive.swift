@@ -6,241 +6,8 @@
 //
 
 import Foundation
-import GRDB
 
-protocol Primitive: DatabaseValueConvertible {}
-
-extension Bool: Primitive {}
-
-extension Int: Primitive {}
-extension Int8: Primitive {}
-extension Int16: Primitive {}
-extension Int32: Primitive {}
-extension Int64: Primitive {}
-
-extension UInt: Primitive {}
-extension UInt8: Primitive {}
-extension UInt16: Primitive {}
-extension UInt32: Primitive {}
-extension UInt64: Primitive {}
-
-extension Float: Primitive {}
-extension Double: Primitive {}
-
-extension String: Primitive {}
-extension Data: Primitive {}
-
-extension NSString: Primitive {}
-extension NSData: Primitive {}
-
-extension NSNumber: Primitive {}
-//extension NSDecimalNumber: Primitive {} // not support, for databaseValue was override by NSNumber
-extension Decimal: Primitive {}
-extension CGFloat: Primitive {}
-
-extension UUID: Primitive {}
-extension NSUUID: Primitive {}
-
-// GRDB will store date as "yyyy-MM-dd HH:mm:ss.SSS" in database, sometimes will loss precision
-extension Date: Primitive {}
-extension NSDate: Primitive {}
-
-extension NSNull: Primitive {}
-
-fileprivate let _posixLocale = Locale(identifier: "en_US_POSIX")
-
-extension Primitive {
-    init?(primitive: Primitive) {
-        if let p = primitive as? Self {
-            self = p
-            return
-        }
-        var r: Any?
-        switch Self.self {
-        case let k as any BinaryInteger.Type:
-            switch primitive {
-            case let v as any BinaryInteger:
-                r = k.init(truncatingIfNeeded: v) as! Self
-            case let v as any BinaryFloatingPoint:
-                r = k.init(v) as! Self
-            case let v as NSNumber:
-                if let k = k as? any SignedInteger.Type {
-                    r = k.init(truncatingIfNeeded: v.int64Value) as! Self
-                } else {
-                    r = k.init(truncatingIfNeeded: v.uint64Value) as! Self
-                }
-            case let v as Bool:
-                r = k.init(truncatingIfNeeded: v ? 1 : 0) as! Self
-            case let v as Data:
-                r = k.init(data: v) as! Self
-            case let v as NSData:
-                r = k.init(data: v as Data) as! Self
-            default: break
-            }
-
-        case let k as any BinaryFloatingPoint.Type:
-            if r != nil { break }
-            switch primitive {
-            case let v as any BinaryInteger:
-                r = k.init(v) as! Self
-            case let v as any BinaryFloatingPoint:
-                r = k.init(v) as! Self
-            case let v as NSNumber:
-                r = k.init(v.doubleValue) as! Self
-            case let v as Bool:
-                r = k.init(v ? 1.0 : 0.0) as! Self
-            case let v as Data:
-                r = k.init(data: v) as! Self
-            case let v as NSData:
-                r = k.init(data: v as Data) as! Self
-            default: break
-            }
-
-        case is Bool.Type:
-            if r != nil { break }
-            switch primitive {
-            case _ as any BinaryInteger:
-                r = (Int64(primitive: primitive) ?? 0) > 0
-            case _ as any BinaryFloatingPoint:
-                r = (Double(primitive: primitive) ?? 0) > 0
-            case let v as NSNumber:
-                r = v.boolValue
-            case let v as Data:
-                r = v.bytes.first ?? 0 > 0
-            case let v as NSData:
-                r = (v as Data).bytes.first ?? 0 > 0
-            default: break
-            }
-
-        case is Data.Type:
-            if r != nil { break }
-            switch primitive {
-            case let v as any Numeric:
-                r = Data(numeric: v)
-            case let v as NSNumber:
-                r = Data(numeric: v.doubleValue)
-            case let v as NSData:
-                r = (v as Data)
-            case let v as String:
-                r = Data(hex: v)
-            case let v as NSString:
-                r = Data(hex: v as String)
-            default: break
-            }
-
-        case is String.Type:
-            if r != nil { break }
-            switch primitive {
-            case let v as CustomStringConvertible:
-                r = v.description
-            default:
-                r = "\(primitive)"
-            }
-
-        case is NSString.Type:
-            if r != nil { break }
-            switch primitive {
-            case let v as CustomStringConvertible:
-                r = v.description as NSString
-            default:
-                r = "\(primitive)" as NSString
-            }
-            
-        case is Decimal.Type:
-            if r != nil { break }
-            switch primitive {
-            case let v as String: // GRDB's Decimal databaseValue
-                r = Decimal(string: v, locale: _posixLocale)
-            default:
-                r = Decimal(string: "\(primitive)", locale: _posixLocale)
-            }
-
-        case is NSNumber.Type:
-            if r != nil { break }
-            r = NSNumber(value: Double(primitive: primitive) ?? 0)
-            
-        case is UUID.Type:
-            if r != nil { break }
-            switch primitive {
-            case let v as Data: // GRDB's UUID databaseValue
-                r = v.withUnsafeBytes {
-                    UUID(uuid: $0.bindMemory(to: uuid_t.self).first!)
-                }
-            default:
-                r = UUID(uuidString: "\(primitive)")
-            }
-            
-        case is NSUUID.Type:
-            if r != nil { break }
-            switch primitive {
-            case let v as Data: // GRDB's UUID databaseValue
-                r = v.withUnsafeBytes {
-                    NSUUID.init(uuidBytes: $0.bindMemory(to: UInt8.self).baseAddress)
-                }
-            default:
-                r = NSUUID(uuidString: "\(primitive)")
-            }
-            
-        case is Date.Type:
-            if r != nil { break }
-            switch primitive {
-            case let v as String: // GRDB's UUID databaseValue
-                r = Date.fromDatabaseValue(v.databaseValue)
-            default:
-                r = Date()
-            }
-            
-        case is NSDate.Type:
-            if r != nil { break }
-            switch primitive {
-            case let v as String: // GRDB's UUID databaseValue
-                r = NSDate.fromDatabaseValue(v.databaseValue)
-            default:
-                r = NSDate()
-            }
-            
-        case let k as any LosslessStringConvertible.Type:
-            if r != nil { break }
-            switch primitive {
-            case let v as String:
-                r = k.init(v)
-            case let v as NSString:
-                r = k.init(v as String)
-            default: break
-            }
-        case is NSNull.Type:
-            return nil
-        default:
-            break
-        }
-
-        guard let result = r as? Self else { return nil }
-        self = result
-    }
-}
-
-extension Numeric {
-    init(data: Data) {
-        self.init(bytes: data.bytes)
-    }
-
-    init(bytes: [UInt8]) {
-        let stride = MemoryLayout<Self>.stride
-        let uint8Pointer = UnsafeMutablePointer<UInt8>.allocate(capacity: stride)
-        for i in 0 ..< bytes.count {
-            uint8Pointer[i] = bytes[i]
-        }
-        let integerPointer = uint8Pointer.withMemoryRebound(to: Self.self, capacity: 1) { $0 }
-        self = integerPointer.pointee
-    }
-
-    var bytes: [UInt8] {
-        let stride = MemoryLayout<Self>.stride
-        let integerPointer = withUnsafePointer(to: self) { $0 }
-        let uint8Pointer = integerPointer.withMemoryRebound(to: UInt8.self, capacity: stride) { $0 }
-        return (0 ..< stride).reduce([]) { $0 + [uint8Pointer[$1]] }
-    }
-}
+// only keep some used extension by lalawue
 
 extension String {
     init(bytes: [UInt8]) {
@@ -251,55 +18,7 @@ extension String {
 }
 
 extension Data {
-    private static let hexTable: [UInt8] = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
-
-    private static func hexDigit(_ byte: UInt8) -> UInt8 {
-        switch byte {
-        case 0x30 ... 0x39: return byte - 0x30
-        case 0x41 ... 0x46: return byte - 0x41 + 0xA
-        case 0x61 ... 0x66: return byte - 0x61 + 0xA
-        default: return 0xFF
-        }
-    }
-
     var bytes: [UInt8] { [UInt8](self) }
-
-    var hex: String {
-        var hexBytes: [UInt8] = []
-        for byte in bytes {
-            let hi = Data.hexTable[Int((byte >> 4) & 0xF)]
-            let lo = Data.hexTable[Int(byte & 0xF)]
-            hexBytes.append(hi)
-            hexBytes.append(lo)
-        }
-        return String(bytes: hexBytes)
-    }
-
-    init(hex: String) {
-        let chars = hex.bytes
-        guard chars.count % 2 == 0 else { self.init(); return }
-        let len = chars.count / 2
-        var buffer: [UInt8] = []
-        for i in 0 ..< len {
-            let h = Data.hexDigit(chars[i * 2])
-            let l = Data.hexDigit(chars[i * 2 + 1])
-            guard h != 0xFF || l != 0xFF else { self.init(); return }
-            let b = h << 4 | l
-            buffer.append(b)
-        }
-        self.init(buffer)
-    }
-
-    init<T>(numeric: T) where T: Numeric {
-        self.init(numeric.bytes)
-    }
-}
-
-extension RawRepresentable {
-    init?(primitive: Primitive) {
-        guard let val = primitive as? Self.RawValue else { return nil }
-        self.init(rawValue: val)
-    }
 }
 
 extension Array {
@@ -316,6 +35,20 @@ extension Array {
         case 8: return (self[0], self[1], self[2], self[3], self[4], self[5], self[6], self[7])
         case 9: return (self[0], self[1], self[2], self[3], self[4], self[5], self[6], self[7], self[8])
         case 10: return (self[0], self[1], self[2], self[3], self[4], self[5], self[6], self[7], self[8], self[9])
+            
+        case 11: return (self[0], self[1], self[2], self[3], self[4], self[5], self[6], self[7], self[8], self[9],
+                         self[10])
+        case 12: return (self[0], self[1], self[2], self[3], self[4], self[5], self[6], self[7], self[8], self[9],
+                         self[10], self[11])
+        case 13: return (self[0], self[1], self[2], self[3], self[4], self[5], self[6], self[7], self[8], self[9],
+                         self[10], self[11], self[12])
+        case 14: return (self[0], self[1], self[2], self[3], self[4], self[5], self[6], self[7], self[8], self[9],
+                         self[10], self[11], self[12], self[13])
+        case 15: return (self[0], self[1], self[2], self[3], self[4], self[5], self[6], self[7], self[8], self[9],
+                         self[10], self[11], self[12], self[13], self[14])
+        case 16: return (self[0], self[1], self[2], self[3], self[4], self[5], self[6], self[7], self[8], self[9],
+                         self[10], self[11], self[12], self[13], self[14], self[15])
+            
         default: return nil
         }
     }

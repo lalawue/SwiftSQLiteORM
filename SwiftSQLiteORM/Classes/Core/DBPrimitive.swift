@@ -121,18 +121,50 @@ extension DBStoreValue {
 
 extension DatabaseValueConvertible {
     
-    internal func dbStoreValue(tname: String, pname: String) throws -> DBStoreValue {
+    internal func dbStoreValue() -> DBStoreValue? {
         switch self {
         case let v as any SignedInteger:
             return .integer(Int64(v))
         case let v as any BinaryFloatingPoint:
             return .real(Double(v))
+        case let v as NSNumber:
+            switch String(cString: v.objCType) {
+            case "c":
+                return .integer(Int64(v.int8Value))
+            case "C":
+                return .integer(Int64(v.uint8Value))
+            case "s":
+                return .integer(Int64(v.int16Value))
+            case "S":
+                return .integer(Int64(v.uint16Value))
+            case "i":
+                return .integer(Int64(v.int32Value))
+            case "I":
+                return .integer(Int64(v.uint32Value))
+            case "l":
+                return .integer(Int64(v.intValue))
+            case "L":
+                return .integer(Int64(bitPattern: v.uint64Value))
+            case "q":
+                return .integer(Int64(v.int64Value))
+            case "Q":
+                return .integer(Int64(bitPattern: v.uint64Value))
+            case "f":
+                return .real(Double(v.floatValue))
+            case "d":
+                return .real(v.doubleValue)
+            case "B":
+                return .integer(v.boolValue ? 1 : 0)
+            default:
+                return nil
+            }
         case let v as String:
             return .text(v)
         case let v as Data:
             return .blob(v)
+
         default:
-            throw DBORMError.FailedToDecodeProperty(typeName: tname, propertyName: pname)
+            return nil
         }
     }
 }
