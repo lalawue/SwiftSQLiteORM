@@ -68,10 +68,10 @@ class AnyDecoder {
                         continue
                     }
                 } else if case .integer(let int64) = value,
-                          let xval = UInt8(exactly: int64)
+                          let xval = UInt16(exactly: int64)
                 {
                     let pval = UnsafeMutableRawPointer.allocate(byteCount: xinfo.size, alignment: xinfo.alignment)
-                    pval.storeBytes(of: xval, as: UInt8.self)
+                    pval.storeBytes(of: xval, as: UInt16.self)
                     defer { pval.deallocate() }
                     try setProperties(typeInfo: xinfo, pointer: pval)
                     let val = getters(type: prop.type).get(from: pval)
@@ -176,10 +176,11 @@ class AnyDecoder {
                         try prop.set(value: val, on: &object)
                         continue
                     }
-                } else if let int64 = value as? any BinaryInteger {
-                    let xval = UInt8(int64)
+                } else if let int64 = value as? any BinaryInteger,
+                          let xval = UInt16(exactly: int64)
+                {
                     let pval = UnsafeMutableRawPointer.allocate(byteCount: xinfo.size, alignment: xinfo.alignment)
-                    pval.storeBytes(of: xval, as: UInt8.self)
+                    pval.storeBytes(of: xval, as: UInt16.self)
                     defer { pval.deallocate() }
                     try setProperties(typeInfo: xinfo, pointer: pval)
                     let val = getters(type: prop.type).get(from: pval)

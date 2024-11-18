@@ -37,6 +37,11 @@ enum BasicEnum: String {
     case b = "bbb"
 }
 
+enum SeqEnum {
+    case c
+    case d
+}
+
 struct BasicType: DBTableDef, Equatable {
     
     var bool: Bool
@@ -75,6 +80,7 @@ struct BasicType: DBTableDef, Equatable {
     var nsdate: NSDate
     
     var benum: BasicEnum
+    var senum: SeqEnum
     var btuple: (a:Int, b:String)
     
     typealias ORMKey = Columns
@@ -116,6 +122,7 @@ struct BasicType: DBTableDef, Equatable {
         case nsdate
         
         case benum
+        case senum
         case btuple
     }
     
@@ -154,6 +161,7 @@ struct BasicType: DBTableDef, Equatable {
         let nsdate = NSDate(timeIntervalSince1970: date.timeIntervalSince1970)
         
         let benum: BasicEnum = isTrue() ? .a : .b
+        let senum: SeqEnum = isTrue() ? .c : .d
         let btuple: (a: Int, b: String) = (Int(arc4random()), "\(arc4random())")
         
         var ret = BasicType(bool: bool,
@@ -182,6 +190,7 @@ struct BasicType: DBTableDef, Equatable {
                             date: date,
                             nsdate: nsdate,
                             benum: benum,
+                            senum: senum,
                             btuple: btuple
         )
         block?(&ret)
@@ -226,12 +235,13 @@ struct BasicType: DBTableDef, Equatable {
                 (lhs.nsdate.databaseValue == rhs.nsdate.databaseValue) &&
                 
                 (lhs.benum == rhs.benum) &&
+                (lhs.senum == rhs.senum) &&
                 ((lhs.btuple.a == rhs.btuple.a) && (lhs.btuple.b == rhs.btuple.b))
         )
     }
     
     func print(_ prefix: String = "") {
-        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal), uuid:\(uuid), nsuuid:\(nsuuid), date:\(date.timeIntervalSinceReferenceDate), nsdate:\(nsdate.timeIntervalSinceReferenceDate) benum:\(benum.rawValue), btuple:(a:\(btuple.a),b:\(btuple.b)"
+        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal), uuid:\(uuid), nsuuid:\(nsuuid), date:\(date.timeIntervalSinceReferenceDate), nsdate:\(nsdate.timeIntervalSinceReferenceDate) benum:\(benum.rawValue), senum:\(senum.hashValue), btuple:(a:\(btuple.a),b:\(btuple.b)"
         NSLog("\(prefix.isEmpty ? "" : ("\(prefix)" + " "))---\n" + str + "\n---")
     }
 }
@@ -287,6 +297,27 @@ struct NestedType: DBTableDef, Equatable {
     
     func print() {
         NSLog("NestedType: \(name), \(ndata.nname), \(ndata.pdata.pname1), \(ndata.pdata.pdata1.pname2), \(ndata.pdata.pdata1.index2)")
+    }
+}
+
+extension URL: DBPrimitive {
+    
+    public init() {
+        // will be placed by database value later
+        self.init(string: "a://a.a")!
+    }
+    
+    public static var ormStoreType: SwiftSQLiteORM.DBStoreType { .TEXT }
+    
+    public func ormToStoreValue() -> SwiftSQLiteORM.DBStoreValue? {
+        return .text(self.absoluteString)
+    }
+    
+    public static func ormFromStoreValue(_ value: SwiftSQLiteORM.DBStoreValue) -> URL? {
+        guard case .text(let string) = value else {
+            return nil
+        }
+        return URL(string: string)
     }
 }
 
@@ -460,6 +491,24 @@ class Tests: XCTestCase {
                 XCTAssert(false, "Failed")
             }
         }
+    }
+    
+    func testDBPrimitiveProtocol() {
+        // make sure 'URL' conforms to DBPrimitive (not provided by SwiftSQLiteORM by default)
+        struct ExtendURLType: DBTableDef {
+            let url: URL
+            typealias ORMKey = Columns
+            enum Columns: String, DBTableKey {
+                case url
+            }
+        }
+        let c = ExtendURLType(url: URL(string: "http://123.com")!)
+        let u = ExtendURLType(url: URL(string: "http://456.com")!)
+        tryBlock({
+            try DBMgnt.push([c, u])
+            let c1 = try DBMgnt.fetch(ExtendURLType.self, .like(.url, "%123%")).first ?? u
+            XCTAssert(c1.url == c.url, "Failed")
+        })
     }
     
     func testDeleteValue() {
