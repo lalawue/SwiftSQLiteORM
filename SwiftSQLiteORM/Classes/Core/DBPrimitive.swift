@@ -244,7 +244,7 @@ private let _posixLocal = Locale(identifier: "en_US_POSIX")
 
 /// for NSNumber was a boxed value for integer or real, will store as text approximate in Decimal
 extension NSNumber: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .REAL }
+    public static var ormStoreType: DBStoreType { .TEXT }
     
     public func ormToStoreValue() -> DBStoreValue? {
         if let decimal = self as? NSDecimalNumber {
@@ -253,11 +253,11 @@ extension NSNumber: DBPrimitive {
         let objcTypeStr = String(cString: self.objCType)
         switch objcTypeStr {
         case "B", "c", "C", "s", "S", "i", "I", "l", "L":
-            return .integer(self.int64Value)
+            return .text(self.int64Value.description)
         case "q", "Q":
             return .text(self.uint64Value.description)
         case "f", "d":
-            return .real(self.doubleValue)
+            return .text(self.doubleValue.description)
         default:
             return nil
         }
