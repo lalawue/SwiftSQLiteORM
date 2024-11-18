@@ -72,6 +72,7 @@ struct BasicType: DBTableDef, Equatable {
     var cgfloat: CGFloat
     
     var decimal: Decimal
+    var nsdecimal: NSDecimalNumber
 
     var uuid: UUID
     var nsuuid: NSUUID
@@ -114,6 +115,7 @@ struct BasicType: DBTableDef, Equatable {
         case cgfloat
         
         case decimal
+        case nsdecimal
 
         case uuid
         case nsuuid
@@ -153,6 +155,7 @@ struct BasicType: DBTableDef, Equatable {
         let cgfloat = CGFloat(floatLiteral: double)
         
         let decimal = isTrue() ? Decimal.greatestFiniteMagnitude : Decimal.leastFiniteMagnitude
+        let nsdecimal = NSDecimalNumber(decimal: decimal)
         
         let uuid = UUID()
         let nsuuid = NSUUID(uuidString: uuid.uuidString)!
@@ -185,6 +188,7 @@ struct BasicType: DBTableDef, Equatable {
                             nsnumber: nsnumber,
                             cgfloat: cgfloat,
                             decimal: decimal,
+                            nsdecimal: nsdecimal,
                             uuid: uuid,
                             nsuuid: nsuuid,
                             date: date,
@@ -226,6 +230,7 @@ struct BasicType: DBTableDef, Equatable {
                 (lhs.cgfloat == rhs.cgfloat) &&
                 
                 (lhs.decimal == rhs.decimal) &&
+                (lhs.nsdecimal == rhs.nsdecimal) &&
                 
                 (lhs.uuid == rhs.uuid) &&
                 (lhs.nsuuid == rhs.nsuuid) &&
@@ -241,7 +246,7 @@ struct BasicType: DBTableDef, Equatable {
     }
     
     func print(_ prefix: String = "") {
-        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal), uuid:\(uuid), nsuuid:\(nsuuid), date:\(date.timeIntervalSinceReferenceDate), nsdate:\(nsdate.timeIntervalSinceReferenceDate) benum:\(benum.rawValue), senum:\(senum.hashValue), btuple:(a:\(btuple.a),b:\(btuple.b)"
+        let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal), nsdecimal:\(nsdecimal), uuid:\(uuid), nsuuid:\(nsuuid), date:\(date.timeIntervalSinceReferenceDate), nsdate:\(nsdate.timeIntervalSinceReferenceDate) benum:\(benum.rawValue), senum:\(senum.hashValue), btuple:(a:\(btuple.a),b:\(btuple.b)"
         NSLog("\(prefix.isEmpty ? "" : ("\(prefix)" + " "))---\n" + str + "\n---")
     }
 }

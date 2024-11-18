@@ -299,6 +299,11 @@ extension NSNumber: DBPrimitive {
         guard case .text(let text) = value else {
             return nil
         }
+        if let _ = Self.self as? NSDecimalNumber.Type,
+           let decimal = Decimal(string: text, locale: _posixLocal)
+        {
+            return NSDecimalNumber(decimal: decimal) as? Self
+        }
         if let bool = Bool(text) {
             return NSNumber(booleanLiteral: bool) as? Self
         }

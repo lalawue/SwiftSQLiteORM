@@ -137,48 +137,68 @@ struct ExampleType: DBTableDef {
 }
 ```
 
-### Supported type
+### Supported ORM Types
 
-DBTableDef protocol support `Primitive` type mapping, and nested type should be Codable.
+DBTableDef protocol support `DBPrimitive` or `Codable` type mapping, you can add other type conforms to `DBPrimitive`.
 
 ```swift
-extension Bool: Primitive {}
+extension Bool: DBPrimitive {}
 
-extension Int: Primitive {}
-extension Int8: Primitive {}
-extension Int16: Primitive {}
-extension Int32: Primitive {}
-extension Int64: Primitive {}
+extension Int: DBPrimitive {}
+extension Int8: DBPrimitive {}
+extension Int16: DBPrimitive {}
+extension Int32: DBPrimitive {}
+extension Int64: DBPrimitive {}
 
-extension UInt: Primitive {}
-extension UInt8: Primitive {}
-extension UInt16: Primitive {}
-extension UInt32: Primitive {}
-extension UInt64: Primitive {}
+extension UInt: DBPrimitive {}
+extension UInt8: DBPrimitive {}
+extension UInt16: DBPrimitive {}
+extension UInt32: DBPrimitive {}
+extension UInt64: DBPrimitive {}
 
-extension Float: Primitive {}
-extension Double: Primitive {}
+extension Float: DBPrimitive {}
+extension Double: DBPrimitive {}
 
-extension String: Primitive {}
-extension Data: Primitive {}
+extension String: DBPrimitive {}
+extension NSString: DBPrimitive {}
 
-extension NSString: Primitive {}
-extension NSData: Primitive {}
+extension Data: DBPrimitive {}
+extension NSData: DBPrimitive {}
 
-extension NSNumber: Primitive {}
-//extension NSDecimalNumber: Primitive {} // not support, for databaseValue was override by NSNumber
-extension Decimal: Primitive {}
-extension CGFloat: Primitive {}
+extension NSNumber: DBPrimitive {}
+//extension NSDecimalNumber: DBPrimitive {}
+extension Decimal: DBPrimitive {}
+extension CGFloat: DBPrimitive {}
 
-extension UUID: Primitive {}
-extension NSUUID: Primitive {}
+extension UUID: DBPrimitive {}
+extension NSUUID: DBPrimitive {}
 
-// GRDB will store date as "yyyy-MM-dd HH:mm:ss.SSS" in database, sometimes will loss precision
-extension Date: Primitive {}
-extension NSDate: Primitive {}
-
-extension NSNull: Primitive {}
+// store date as "yyyy-MM-dd HH:mm:ss.SSS" in database, and restore will loss precision
+extension Date: DBPrimitive {}
+extension NSDate: DBPrimitive {}
 ```
+
+### Filter Options
+
+filter option use `DBRecordFilter` to pass value to interface, when running `fetch` or `delete`.
+
+SQLite will cast those input value according to column type, before performing calculation.
+
+supported column types are listed in `DBStoreType`:
+
+- INTEGER
+- REAL
+- TEXT
+- BLOB
+
+and any custom types confirms to `DBPrimitive` can box value inside `DBStoreValue` when store into database:
+
+- integer(Int64)
+- real(Double)
+- text(String)
+- blob(Data)
+
+also support optinal property, and column data is nullable.
 
 ## Test
 
