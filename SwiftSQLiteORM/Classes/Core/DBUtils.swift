@@ -312,11 +312,8 @@ extension AnyDecoder {
             }
             //
             if xinfo.kind == .enum {
-                if let t = prop.type as? any RawRepresentable.Type,
-                   let xtype = prop.type as? any DBPrimitive.Type,
-                   let xval = xtype.ormFromStoreValue(value)
-                {
-                    if let val = t.init(primitive: xval) {
+                if let t = prop.type as? any RawRepresentable.Type {
+                    if let val = t.init(primitive: value.primitiveValue()) {
                         try prop.set(value: val, on: &object)
                         continue
                     }
@@ -333,9 +330,7 @@ extension AnyDecoder {
                 }
             }
             //
-            if let _ = prop.type as? Codable,
-               case .text(let string) = value
-            {
+            if case .text(let string) = value {
                 let data = Data(string.bytes)
                 let json = try? JSONSerialization.jsonObject(with: data, options: [])
                 switch json {

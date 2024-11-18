@@ -69,18 +69,18 @@ private class DBTableRecord<T: DBTableDef>: Record {
     /// column name -> value from push / delete operation
     private let _cvs: [String:any DBPrimitive]
     
-    required init(row: Row, cvs: [String:any DBPrimitive]) {
+    required init(row: Row, cvs: [String:any DBPrimitive]) throws {
         if row == _emptyRow {
             self._obj = nil
         } else {
-            self._obj = try? AnyDecoder.decode(T.self, T._nameMapping(), from: row)
+            self._obj = try AnyDecoder.decode(T.self, T._nameMapping(), from: row)
         }
         self._cvs = cvs
         super.init(row: row)
     }
     
     required convenience init(row: Row) {
-        self.init(row: row, cvs: _emptyCVs)
+        try! self.init(row: row, cvs: _emptyCVs)
     }
     
     static func createTable(db: Database) throws {
@@ -146,7 +146,9 @@ private class DBTableRecord<T: DBTableDef>: Record {
     /// fetch row to instance
     static func fetch(db: Database, sql: String) throws -> [T] {
         dbLog("(\(T.databaseName)) fetch sql: '\(sql)'")
-        guard let arr = try? fetchAll(db, sql: sql, arguments: _emptyArgs) as? [Self], arr.count > 0 else {
+        guard let arr = try? fetchAll(db, sql: sql, arguments: _emptyArgs) as? [Self],
+                arr.count > 0 else
+        {
             return []
         }
         return arr.compactMap({ $0._obj })
@@ -154,8 +156,8 @@ private class DBTableRecord<T: DBTableDef>: Record {
 
     /// transform to record then insert / update
     static func push(db: Database, values: [T]) throws {
-        try AnyEncoder.encode(values).map({
-            DBTableRecord<T>(row: _emptyRow, cvs: $0)
+        try AnyEncoder.encode(values).compactMap({
+            try DBTableRecord<T>(row: _emptyRow, cvs: $0)
         }).forEach { try $0.performSave(db) }
     }
 

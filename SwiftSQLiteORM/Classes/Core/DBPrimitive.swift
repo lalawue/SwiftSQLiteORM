@@ -66,12 +66,19 @@ extension DBPrimitive {
         switch Self.self {
         case _ as NSString.Type: return try ormMockType(as: String.self, NSString.self)
         case _ as NSString?.Type: return try ormMockType(as: String?.self, NSString?.self)
+            
         case _ as NSNumber.Type: return try ormMockType(as: Decimal.self, NSNumber.self)
         case _ as NSNumber?.Type: return try ormMockType(as: Decimal?.self, NSNumber?.self)
+            
         case _ as NSUUID.Type: return try ormMockType(as: UUID.self, NSUUID.self)
         case _ as NSUUID?.Type: return try ormMockType(as: UUID?.self, NSUUID?.self)
+            
         case _ as NSDate.Type: return try ormMockType(as: Date.self, NSDate.self)
         case _ as NSDate?.Type: return try ormMockType(as: Date?.self, NSDate?.self)
+            
+        case _ as NSData.Type: return try ormMockType(as: Data.self, NSData.self)
+        case _ as NSData?.Type: return try ormMockType(as: Data?.self, NSData?.self)
+            
         default: return try typeInfo(of: Self.self)
         }
     }
@@ -100,9 +107,21 @@ extension DBPrimitive {
     }
 }
 
+extension DBStoreValue {
+    
+    internal func primitiveValue() -> DBPrimitive {
+        switch self {
+        case .integer(let int64): return int64
+        case .real(let double): return double
+        case .text(let string): return string
+        case .blob(let data): return data
+        }
+    }
+}
+
 extension DatabaseValueConvertible {
     
-    internal func dbStoreValue(tname: String, pname: String) throws -> DBStoreValue? {
+    internal func dbStoreValue(tname: String, pname: String) throws -> DBStoreValue {
         switch self {
         case let v as any SignedInteger:
             return .integer(Int64(v))
@@ -225,7 +244,7 @@ private let _posixLocal = Locale(identifier: "en_US_POSIX")
 
 /// for NSNumber was a boxed value for integer or real, will store as text approximate in Decimal
 extension NSNumber: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .TEXT }
+    public static var ormStoreType: DBStoreType { .REAL }
     
     public func ormToStoreValue() -> DBStoreValue? {
         if let decimal = self as? NSDecimalNumber {
@@ -245,13 +264,22 @@ extension NSNumber: DBPrimitive {
     }
     
     public static func ormFromStoreValue(_ value: DBStoreValue) -> Self? {
-        if case .text(let text) = value,
-           let decimal = Decimal(string: text, locale: _posixLocal)
-        {
-            return NSDecimalNumber(decimal: decimal) as? Self
-        } else {
+        guard case .text(let text) = value else {
             return nil
         }
+        if let bool = Bool(text) {
+            return NSNumber(booleanLiteral: bool) as? Self
+        }
+        if let int = Int(text) {
+            return NSNumber(integerLiteral: int) as? Self
+        }
+        if let double = Double(text) {
+            return NSNumber(floatLiteral: double) as? Self
+        }
+        if let decimal = Decimal(string: text, locale: _posixLocal) {
+            return NSDecimalNumber(decimal: decimal) as? Self
+        }
+        return nil
     }
 }
 
