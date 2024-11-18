@@ -5,18 +5,21 @@
 //  Created by lalawue on 2024/11/16.
 //
 
-import Foundation
+import Runtime
+import GRDB
 
 /// database column type
+/// - will perform relative type calculation in sql expression
+/// - https://sqlite.org/datatype3.html
 public enum DBStoreType {
-    
+
     /// Int64
     case INTEGER
     
     /// Double
     case REAL
     
-    /// String
+    /// String, Numeric
     case TEXT
 
     /// Data
@@ -24,255 +27,326 @@ public enum DBStoreType {
 }
 
 /// database store value type
+/// - will sotre as type's DatabaseValueConvertible through GRDB
 public enum DBStoreValue {
     
-    /// box within int64
+    /// box with int64
     case integer(Int64)
 
-    /// box within double
+    /// box with double
     case real(Double)
 
-    /// box within String
+    /// box with String
     case text(String)
 
-    /// box within data
+    /// box with data
     case blob(Data)
 }
 
-/// supported protocol for store / restrore from database
-public protocol DBPrimitive {
-
+/// type transform for store / restore from database
+public protocol DBPrimitive: DefaultConstructor {
+    
     /// database column type
-    static var ormStoreType: DBStoreType {  get }
+    static var ormStoreType: DBStoreType { get }
+    
+    /// return TypeInfo for mocking, for example objc wrapper NSUUID
+    static func ormTypeInfo() throws -> TypeInfo
 
     /// mapping value to store in database
-    static func ormToStoreValue(_ value: Self) -> DBStoreValue?
+    func ormToStoreValue() -> DBStoreValue?
 
     /// restore value from database
     static func ormFromStoreValue(_ value: DBStoreValue) -> Self?
 }
 
-// MARK: - Bool
-
-extension Bool: DBPrimitive {
+extension DBPrimitive {
     
-    public static var ormStoreType: DBStoreType {
-        .INTEGER
+    /// buildin some objc wrapper types
+    public static func ormTypeInfo() throws -> TypeInfo {
+        switch Self.self {
+        case _ as NSString.Type: return try ormMockType(as: String.self, NSString.self)
+        case _ as NSString?.Type: return try ormMockType(as: String?.self, NSString?.self)
+        case _ as NSNumber.Type: return try ormMockType(as: Decimal.self, NSNumber.self)
+        case _ as NSNumber?.Type: return try ormMockType(as: Decimal?.self, NSNumber?.self)
+        case _ as NSUUID.Type: return try ormMockType(as: UUID.self, NSUUID.self)
+        case _ as NSUUID?.Type: return try ormMockType(as: UUID?.self, NSUUID?.self)
+        case _ as NSDate.Type: return try ormMockType(as: Date.self, NSDate.self)
+        case _ as NSDate?.Type: return try ormMockType(as: Date?.self, NSDate?.self)
+        default: return try typeInfo(of: Self.self)
+        }
     }
     
-    public static func ormToStoreValue(_ value: Bool) -> DBStoreValue? {
-        return .integer(Int64(value ? 1 : 0))
+    /// replace type or generic type
+    public static func ormMockType(as atype: Any.Type, _ ttype: Any.Type) throws -> TypeInfo {
+        var ainfo = try typeInfo(of: atype)
+        if ainfo.kind == .optional {
+            ainfo.genericTypes = [ttype]
+        } else {
+            ainfo.type = ttype
+        }
+        return ainfo
     }
     
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> Bool? {
-        if case .integer(let int64) = value {
-            return (int64 == 1)
+    internal func grdbValue() -> DatabaseValue? {
+        guard let svalue = ormToStoreValue() else {
+            return nil
         }
-        return nil
+        switch svalue {
+        case .integer(let int64): return int64.databaseValue
+        case .real(let double): return double.databaseValue
+        case .text(let string): return string.databaseValue
+        case .blob(let data): return data.databaseValue
+        }
     }
 }
 
-// MARK: - Int64
-
-extension BinaryInteger {
+extension DatabaseValueConvertible {
     
-    @inline(__always)
-    static func _ormToStoreValue(_ value: any BinaryInteger) -> DBStoreValue? {
-        return .integer(Int64(exactly: value)!)
-    }
-
-    @inline(__always)
-    static func _ormFromStoreValue(_ value: DBStoreValue) -> Self? {
-        if case .integer(let int64) = value {
-            return Self(exactly: int64)
+    internal func dbStoreValue(tname: String, pname: String) throws -> DBStoreValue? {
+        switch self {
+        case let v as any SignedInteger:
+            return .integer(Int64(v))
+        case let v as any BinaryFloatingPoint:
+            return .real(Double(v))
+        case let v as String:
+            return .text(v)
+        case let v as Data:
+            return .blob(v)
+        default:
+            throw DBORMError.FailedToDecodeProperty(typeName: tname, propertyName: pname)
         }
-        return nil
     }
 }
 
-extension Int: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .INTEGER }
-    public static func ormToStoreValue(_ value: Int) -> DBStoreValue? {
-        _ormToStoreValue(value)
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> Int? {
-        _ormFromStoreValue(value)
-    }
-}
+// MARK: - Bool, Int64, UInt64
 
-extension Int8: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .INTEGER }
-    public static func ormToStoreValue(_ value: Int8) -> DBStoreValue? {
-        _ormToStoreValue(value)
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> Int8? {
-        _ormFromStoreValue(value)
-    }
-}
+private protocol DBIntegerPrimitive {}
 
-extension Int16: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .INTEGER }
-    public static func ormToStoreValue(_ value: Int16) -> DBStoreValue? {
-        _ormToStoreValue(value)
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> Int16? {
-        _ormFromStoreValue(value)
-    }
-}
+extension DBIntegerPrimitive {
 
-extension Int32: DBPrimitive {
     public static var ormStoreType: DBStoreType { .INTEGER }
-    public static func ormToStoreValue(_ value: Int32) -> DBStoreValue? {
-        _ormToStoreValue(value)
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> Int32? {
-        _ormFromStoreValue(value)
-    }
-}
 
-extension Int64: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .INTEGER }
-    public static func ormToStoreValue(_ value: Int64) -> DBStoreValue? {
-        return .integer(value)
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> Int64? {
-        if case .integer(let int64) = value {
-            return int64
+    public func ormToStoreValue() -> DBStoreValue? {
+        switch self {
+        case let val as Bool: return .integer(val ? 1 : 0)
+            //
+        case let val as Int8: return .integer(Int64(val))
+        case let val as Int16: return .integer(Int64(val))
+        case let val as Int32: return .integer(Int64(val))
+        case let val as Int: return .integer(Int64(val))
+        case let val as Int64: return .integer(val)
+            //
+        case let val as UInt8: return .integer(Int64(val))
+        case let val as UInt16: return .integer(Int64(val))
+        case let val as UInt32: return .integer(Int64(bitPattern: UInt64(val)))
+        case let val as UInt: return .integer(Int64(bitPattern: UInt64(val)))
+        case let val as UInt64: return .integer(Int64(bitPattern: val))
+            //
+        default: return nil
         }
-        return nil
     }
-}
 
-// MARK: UInt64
-
-extension UInt: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .INTEGER }
-    public static func ormToStoreValue(_ value: UInt) -> DBStoreValue? {
-        UInt64.ormToStoreValue(UInt64(value))
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> UInt? {
-        if let uval = UInt64.ormFromStoreValue(value) {
-            return UInt(exactly: uval)
+    public static func ormFromStoreValue<T: DBIntegerPrimitive>(_ value: DBStoreValue) -> T? {
+        guard case .integer(let int64) = value else {
+            return nil
         }
-        return nil
-    }
-}
-
-extension UInt8: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .INTEGER }
-    public static func ormToStoreValue(_ value: UInt8) -> DBStoreValue? {
-        _ormToStoreValue(value)
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> UInt8? {
-        _ormFromStoreValue(value)
-    }
-}
-
-extension UInt16: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .INTEGER }
-    public static func ormToStoreValue(_ value: UInt16) -> DBStoreValue? {
-        _ormToStoreValue(value)
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> UInt16? {
-        _ormFromStoreValue(value)
-    }
-}
-
-extension UInt32: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .INTEGER }
-    public static func ormToStoreValue(_ value: UInt32) -> DBStoreValue? {
-        _ormToStoreValue(value)
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> UInt32? {
-        _ormFromStoreValue(value)
-    }
-}
-
-extension UInt64: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .INTEGER }
-    public static func ormToStoreValue(_ value: UInt64) -> DBStoreValue? {
-        return .integer(Int64(bitPattern: value))
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> UInt64? {
-        if case .integer(let int64) = value {
-            return UInt64(bitPattern: int64)
+        switch Self.self {
+        case _ as Bool.Type: return (int64 == 1) as? T
+            //
+        case _ as Int8.Type: return Int8(exactly: int64) as? T
+        case _ as Int16.Type: return Int16(exactly: int64) as? T
+        case _ as Int32.Type: return Int32(exactly: int64) as? T
+        case _ as Int.Type: return Int(exactly: int64) as? T
+        case _ as Int64.Type: return int64 as? T
+            //
+        case _ as UInt8.Type: return UInt8(exactly: int64) as? T
+        case _ as UInt16.Type: return UInt16(exactly: int64) as? T
+        case _ as UInt32.Type: return UInt32(exactly: UInt64(bitPattern: int64)) as? T
+        case _ as UInt.Type: return UInt(exactly: UInt64(bitPattern: int64)) as? T
+        case _ as UInt64.Type: return UInt64(bitPattern: int64) as? T
+            //
+        default: return nil
         }
-        return nil
     }
 }
 
-// MARK: - Double
+extension Bool: DBPrimitive, DBIntegerPrimitive {}
 
-extension BinaryFloatingPoint {
-    @inline(__always)
-    static func _ormToStoreValue(_ value: any BinaryFloatingPoint) -> DBStoreValue? {
-        if let tval = Double(exactly: value) {
-            return .real(tval)
-        }
-        return nil
-    }
+extension Int: DBPrimitive, DBIntegerPrimitive {}
+extension Int8: DBPrimitive, DBIntegerPrimitive {}
+extension Int16: DBPrimitive, DBIntegerPrimitive {}
+extension Int32: DBPrimitive, DBIntegerPrimitive {}
+extension Int64: DBPrimitive, DBIntegerPrimitive {}
 
-    @inline(__always)
-    static func _ormFromStoreValue(_ value: DBStoreValue) -> Self? {
-        if case .real(let double) = value {
-            return Self(exactly: double)
-        }
-        return nil
-    }
-}
+extension UInt: DBPrimitive, DBIntegerPrimitive {}
+extension UInt8: DBPrimitive, DBIntegerPrimitive {}
+extension UInt16: DBPrimitive, DBIntegerPrimitive {}
+extension UInt32: DBPrimitive, DBIntegerPrimitive {}
+extension UInt64: DBPrimitive, DBIntegerPrimitive {}
 
-extension Float: DBPrimitive {
+// MARK: - Float, Double, CGFloat
+
+private protocol DBRealPrimitive {}
+
+extension DBRealPrimitive {
+    
     public static var ormStoreType: DBStoreType { .REAL }
-    public static func ormToStoreValue(_ value: Float) -> DBStoreValue? {
-        return _ormToStoreValue(value)
+    
+    public func ormToStoreValue() -> DBStoreValue? {
+        switch self {
+        case let val as Float: return .real(Double(val))
+        case let val as Double: return .real(val)
+        case let val as CGFloat: return .real(Double(val))
+        default: return nil
+        }
     }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> Float? {
-        return _ormFromStoreValue(value)
+    
+    public static func ormFromStoreValue<T: BinaryFloatingPoint>(_ value: DBStoreValue) -> T? {
+        guard case .real(let double) = value else {
+            return nil
+        }
+        switch Self.self {
+        case _ as Float.Type: fallthrough
+        case _ as Double.Type: fallthrough
+        case _ as CGFloat.Type:
+            return T(double)
+        default: return nil
+        }
     }
 }
 
-extension Double: DBPrimitive {
-    public static var ormStoreType: DBStoreType { .REAL }
-    public static func ormToStoreValue(_ value: Double) -> DBStoreValue? {
-        return _ormToStoreValue(value)
-    }
-    public static func ormFromStoreValue(_ value: DBStoreValue) -> Double? {
-        return _ormFromStoreValue(value)
-    }
-}
+extension Float: DBPrimitive, DBRealPrimitive {}
+extension Double: DBPrimitive, DBRealPrimitive {}
+extension CGFloat: DBPrimitive, DBRealPrimitive {}
+
+// MARK: - NSNumber, NSDecimalNumber, Decimal
 
 private let _posixLocal = Locale(identifier: "en_US_POSIX")
 
+/// for NSNumber was a boxed value for integer or real, will store as text approximate in Decimal
 extension NSNumber: DBPrimitive {
     public static var ormStoreType: DBStoreType { .TEXT }
     
-    public static func ormToStoreValue(_ value: NSNumber) -> DBStoreValue? {
-        if let decimal = value as? NSDecimalNumber {
+    public func ormToStoreValue() -> DBStoreValue? {
+        if let decimal = self as? NSDecimalNumber {
             return .text(decimal.description(withLocale: _posixLocal))
         }
-        let objcTypeStr = String(cString: value.objCType)
+        let objcTypeStr = String(cString: self.objCType)
         switch objcTypeStr {
         case "B", "c", "C", "s", "S", "i", "I", "l", "L":
-            return Int64.ormToStoreValue(value.int64Value)
+            return .integer(self.int64Value)
         case "q", "Q":
-            return UInt64.ormToStoreValue(value.uint64Value)
+            return .text(self.uint64Value.description)
         case "f", "d":
-            return Double.ormToStoreValue(value.doubleValue)
+            return .real(self.doubleValue)
         default:
             return nil
         }
     }
     
     public static func ormFromStoreValue(_ value: DBStoreValue) -> Self? {
-        switch value {
-        case .text(let text):
-            if let decimal = Decimal(string: text, locale: _posixLocal) {
-                return NSDecimalNumber(decimal: decimal) as? Self
+        if case .text(let text) = value,
+           let decimal = Decimal(string: text, locale: _posixLocal)
+        {
+            return NSDecimalNumber(decimal: decimal) as? Self
+        } else {
+            return nil
+        }
+    }
+}
+
+extension Decimal: DBPrimitive {
+    
+    public static var ormStoreType: DBStoreType { .TEXT }
+
+    public func ormToStoreValue() -> DBStoreValue? {
+        return .text(self.description)
+    }
+    
+    public static func ormFromStoreValue(_ value: DBStoreValue) -> Decimal? {
+        if case .text(let string) = value,
+           let decimal = Decimal(string: string, locale: _posixLocal)
+        {
+            return decimal
+        } else {
+            return nil
+        }
+    }
+}
+
+// MARK: - String, NSString
+
+private protocol DBTextPrimitive {}
+
+extension DBTextPrimitive {
+ 
+    public static var ormStoreType: DBStoreType { .TEXT }
+    
+    public func ormToStoreValue() -> DBStoreValue? {
+        switch self {
+        case let val as String: return .text(val)
+        case let val as NSString: return .text(val as String)
+        default: return nil
+        }
+    }
+    
+    public static func ormFromStoreValue<T: DBTextPrimitive>(_ value: DBStoreValue) -> T? {
+        guard case .text(let string) = value else {
+            return nil
+        }
+        switch Self.self {
+        case _ as String.Type: return string as? T
+        case _ as NSString.Type: return (string as NSString) as? T
+        default: return nil
+        }
+    }
+}
+
+extension String: DBPrimitive, DBTextPrimitive {}
+extension NSString: DBPrimitive, DBTextPrimitive {}
+
+// MARK: - Data, NSData, UUID, NSUUID
+
+private protocol DBDataPrimitive {}
+
+extension DBDataPrimitive {
+    
+    public static var ormStoreType: DBStoreType { .BLOB }
+    
+    public func ormToStoreValue() -> DBStoreValue? {
+        switch self {
+        case let val as Data: return .blob(val)
+        case let val as NSData: return .blob(val as Data)
+        case let val as UUID:
+            return .blob(withUnsafeBytes(of: val.uuid) {
+                Data(bytes: $0.baseAddress!, count: $0.count)
+            })
+        case let val as NSUUID:
+            var uuidBytes = ContiguousArray(repeating: UInt8(0), count: 16)
+            return .blob(uuidBytes.withUnsafeMutableBufferPointer { buffer in
+                val.getBytes(buffer.baseAddress!)
+                return NSData(bytes: buffer.baseAddress, length: 16) as Data
+            })
+        default:
+            return nil
+        }
+    }
+    
+    public static func ormFromStoreValue<T: DBDataPrimitive>(_ value: DBStoreValue) -> T? {
+        guard case .blob(let data) = value else {
+            return nil
+        }
+        switch Self.self {
+        case _ as Data.Type: return data as? T
+        case _ as NSData.Type: return (data as Data) as? T
+        case _ as UUID.Type:
+            if data.count == 16 {
+                return data.withUnsafeBytes { UUID(uuid: $0.bindMemory(to: uuid_t.self).first!) } as? T
             }
-        case .integer(let int64):
-            return Self(value: int64)
-        case .real(let double):
-            return Self(value: double)
+        case _ as NSUUID.Type:
+            if  data.count == 16 {
+                return data.withUnsafeBytes { NSUUID(uuidBytes: $0.bindMemory(to: UInt8.self).baseAddress) } as? T
+            }
         default:
             break
         }
@@ -280,24 +354,47 @@ extension NSNumber: DBPrimitive {
     }
 }
 
-// MARK: - String
+extension Data: DBPrimitive, DBDataPrimitive {}
+extension NSData: DBPrimitive, DBDataPrimitive {}
 
-//extension String: Primitive {}
-//extension Data: Primitive {}
-//
-//extension NSString: Primitive {}
-//extension NSData: Primitive {}
-//
-//extension NSNumber: Primitive {}
-////extension NSDecimalNumber: Primitive {} // not support, for databaseValue was override by NSNumber
-//extension Decimal: Primitive {}
-//extension CGFloat: Primitive {}
-//
-//extension UUID: Primitive {}
-//extension NSUUID: Primitive {}
-//
-//// GRDB will store date as "yyyy-MM-dd HH:mm:ss.SSS" in database, sometimes will loss precision
-//extension Date: Primitive {}
-//extension NSDate: Primitive {}
-//
-//extension NSNull: Primitive {}
+extension UUID: DBPrimitive, DBDataPrimitive {}
+extension NSUUID: DBPrimitive, DBDataPrimitive {}
+
+// MARK: - Date, NSDate
+
+private let dbDateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    return formatter
+}()
+
+private protocol DBDatePrimitive {}
+
+extension DBDatePrimitive {
+    
+    public static var ormStoreType: DBStoreType { .TEXT }
+    
+    public func ormToStoreValue() -> DBStoreValue? {
+        switch self {
+        case let val as Date: return .text(dbDateFormatter.string(from: val))
+        case let val as NSDate: return .text(dbDateFormatter.string(from: val as Date))
+        default: return nil
+        }
+    }
+    
+    public static func ormFromStoreValue<T: DBDatePrimitive>(_ value: DBStoreValue) -> T? {
+        guard case .text(let string) = value else {
+            return nil
+        }
+        switch Self.self {
+        case _ as Date.Type: return dbDateFormatter.date(from: string) as? T
+        case _ as NSDate.Type: return dbDateFormatter.date(from: string) as? T
+        default: return nil
+        }
+    }
+}
+
+extension Date: DBPrimitive, DBDatePrimitive {}
+extension NSDate: DBPrimitive, DBDatePrimitive {}

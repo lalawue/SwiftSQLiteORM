@@ -57,7 +57,7 @@ extension DBTableDef {
 }
 
 private let _emptyRow = Row()
-private let _emptyCVs = [String:Primitive]()
+private let _emptyCVs = [String:any DBPrimitive]()
 private let _emptyArgs = StatementArguments()
 
 /// GRDB Record encode & decode, column names mapping
@@ -67,9 +67,9 @@ private class DBTableRecord<T: DBTableDef>: Record {
     private let _obj: T?
     
     /// column name -> value from push / delete operation
-    private let _cvs: [String:Primitive]
+    private let _cvs: [String:any DBPrimitive]
     
-    required init(row: Row, cvs: [String:Primitive]) {
+    required init(row: Row, cvs: [String:any DBPrimitive]) {
         if row == _emptyRow {
             self._obj = nil
         } else {
@@ -95,7 +95,8 @@ private class DBTableRecord<T: DBTableDef>: Record {
                 guard let cname = p2c[p.name] else {
                     return
                 }
-                let col = tbl.column(cname, getColumnType(rawType: p.type))
+                let ctype = getColumnType(rawType: p.type)
+                let col = tbl.column(cname, ctype)
                 if cname == cpname {
                     col.primaryKey(onConflict: .abort)
                 }
@@ -130,7 +131,8 @@ private class DBTableRecord<T: DBTableDef>: Record {
                 guard let cname = p2c[p.name], nset.contains(p.name) else {
                     return
                 }
-                let col = tbl.add(column: cname, getColumnType(rawType: p.type))
+                let ctype = getColumnType(rawType: p.type)
+                let col = tbl.add(column: cname, ctype)
                 if let val = (try? defaultValue(of: p.type)) as? DatabaseValueConvertible {
                     col.defaults(to: val)
                 } else {
@@ -143,7 +145,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
     
     /// fetch row to instance
     static func fetch(db: Database, sql: String) throws -> [T] {
-        //dbLog("(\(T.databaseName)) fetch sql: '\(sql)'")
+        dbLog("(\(T.databaseName)) fetch sql: '\(sql)'")
         guard let arr = try? fetchAll(db, sql: sql, arguments: _emptyArgs) as? [Self], arr.count > 0 else {
             return []
         }
@@ -166,7 +168,7 @@ private class DBTableRecord<T: DBTableDef>: Record {
     /// insert / update
     override func encode(to container: inout PersistenceContainer) {
         T._nameMapping().forEach { (_, cname) in
-            container[cname] = _cvs[cname]
+            container[cname] = _cvs[cname]?.grdbValue()
         }
     }
     

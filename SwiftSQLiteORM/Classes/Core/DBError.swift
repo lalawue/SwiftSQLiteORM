@@ -22,8 +22,11 @@ public enum DBORMError: Error {
     /// operation require primaryKey
     case FailedToOperateWithoutPrimaryKey(typeName: String)
     
-    /// property not Codable
+    /// property failed to encode to database
     case FailedToEncodeProperty(typeName: String, propertyName: String)
+
+    /// property afiled to decode from database
+    case FailedToDecodeProperty(typeName: String, propertyName: String)
 }
 
 extension DBORMError {
@@ -39,6 +42,8 @@ extension DBORMError {
             return "FailedToOperateWithoutPrimaryKey for '\(typeName)'"
         case .FailedToEncodeProperty(let typeName, let propertyName):
             return "FailedToEncodeProperty for '\(typeName) -> \(propertyName)'"
+        case .FailedToDecodeProperty(let typeName, let propertyName):
+            return "FailedToDecodeProperty for '\(typeName) -> \(propertyName)'"
         }
     }
 }

@@ -178,17 +178,17 @@ class AnyDecoder {
     
     static let emptySet = Set<String>()
     
-    class func decode<T: DBTableDef>(_ type: T.Type, from containers: [[String: Primitive]]) throws -> [T] {
-        return try containers.map { try decode(type, from: $0) }
-    }
-
-    class func decode<T: DBTableDef>(_ type: T.Type, from container: [String: Primitive]) throws -> T {
-        guard let result = try createObject(type, from: container) as? T else {
-            throw DecodingError.mismatch(type)
-        }
-        return result
-    }
-
+//    class func decode<T: DBTableDef>(_ type: T.Type, from containers: [[String: Primitive]]) throws -> [T] {
+//        return try containers.map { try decode(type, from: $0) }
+//    }
+//
+//    class func decode<T: DBTableDef>(_ type: T.Type, from container: [String: Primitive]) throws -> T {
+//        guard let result = try createObject(type, from: container) as? T else {
+//            throw DecodingError.mismatch(type)
+//        }
+//        return result
+//    }
+//
     class func createObject(_ type: Any.Type, from container: [String: Any]) throws -> Any {
         var info = try rtTypeInfo(of: type)
         let genericType: Any.Type

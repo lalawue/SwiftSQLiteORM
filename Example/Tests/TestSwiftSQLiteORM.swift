@@ -130,7 +130,7 @@ struct BasicType: DBTableDef, Equatable {
         let uint = UInt(truncatingIfNeeded: arc4random())
         let uint8 = UInt8(truncatingIfNeeded: arc4random())
         let uint16 = UInt16(truncatingIfNeeded: arc4random())
-        let uint32 = UInt32(truncatingIfNeeded: arc4random())
+        let uint32 = UInt32.max
         let uint64 = UInt64.max
 
         let float = isTrue() ? Float.greatestFiniteMagnitude : (-Float(arc4random()) / 7)
@@ -230,9 +230,9 @@ struct BasicType: DBTableDef, Equatable {
         )
     }
     
-    func print() {
+    func print(_ prefix: String = "") {
         let str = "bool:\(bool), bool_opt:\(String(describing: bool_opt)), int:\(int), int8:\(int8), int16:\(int16), int32:\(int32), int64:\(int64), uint:\(uint), uint8:\(uint8), uint16:\(uint16), uint32:\(uint32), uint64:\(uint64), float:\(float), double:\(double), string:\(string), nsstring:\(nsstring) data:\(data), nsdata:\(nsdata), nsnumber:\(nsnumber), cgfloat:\(cgfloat), decimal:\(decimal), uuid:\(uuid), nsuuid:\(nsuuid), date:\(date.timeIntervalSinceReferenceDate), nsdate:\(nsdate.timeIntervalSinceReferenceDate) benum:\(benum.rawValue), btuple:(a:\(btuple.a),b:\(btuple.b)"
-        NSLog(str)
+        NSLog("\(prefix.isEmpty ? "" : ("\(prefix)" + " "))---\n" + str + "\n---")
     }
 }
 
@@ -312,17 +312,22 @@ class Tests: XCTestCase {
         let c = BasicType.randomValue()
         let u = BasicType.randomValue()
         
-        //c.print()
+        c.print("c")
+        u.print("u")
         
         do {
-            tryBlock({ try DBMgnt.push([c, u] )})
+            tryBlock({
+                try DBMgnt.push([c, u])
+                let count = try DBMgnt.fetch(BasicType.self).count
+                XCTAssert(count == 2, "Failed")
+            })
         }
 
         do {
             let c1 = tryBlock({ try DBMgnt.fetch(BasicType.self, .eq(.int, c.int)) }).first ?? u
             let u1 = tryBlock({ try DBMgnt.fetch(BasicType.self, .eq(.string, u.string)) }).first ?? c
 
-            //c1.print()
+            c1.print("c1")
 
             XCTAssert(c1 == c, "Failed")
             XCTAssert(u1 == u, "Failed")
