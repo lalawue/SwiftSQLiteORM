@@ -191,7 +191,7 @@ extension DBIntegerPrimitive {
         case let val as UInt16: return .integer(Int64(val))
         case let val as UInt32: return .integer(Int64(bitPattern: UInt64(val)))
         case let val as UInt: return .integer(Int64(bitPattern: UInt64(val)))
-        case let val as UInt64: return .integer(Int64(bitPattern: val))
+        //case let val as UInt64: return .integer(Int64(bitPattern: val))
             //
         default: return nil
         }
@@ -214,7 +214,7 @@ extension DBIntegerPrimitive {
         case _ as UInt16.Type: return UInt16(exactly: int64) as? T
         case _ as UInt32.Type: return UInt32(exactly: UInt64(bitPattern: int64)) as? T
         case _ as UInt.Type: return UInt(exactly: UInt64(bitPattern: int64)) as? T
-        case _ as UInt64.Type: return UInt64(bitPattern: int64) as? T
+        //case _ as UInt64.Type: return UInt64(bitPattern: int64) as? T
             //
         default: return nil
         }
@@ -233,7 +233,20 @@ extension UInt: DBPrimitive, DBIntegerPrimitive {}
 extension UInt8: DBPrimitive, DBIntegerPrimitive {}
 extension UInt16: DBPrimitive, DBIntegerPrimitive {}
 extension UInt32: DBPrimitive, DBIntegerPrimitive {}
-extension UInt64: DBPrimitive, DBIntegerPrimitive {}
+
+extension UInt64: DBPrimitive {
+    public static var ormStoreType: DBStoreType { .TEXT }
+    public func ormToStoreValue() -> DBStoreValue? {
+        .text(self.description)
+    }
+    
+    public static func ormFromStoreValue(_ value: DBStoreValue) -> UInt64? {
+        if case .text(let string) = value, let v = UInt64(string) {
+            return v
+        }
+        return nil
+    }
+}
 
 // MARK: - Float, Double, CGFloat
 

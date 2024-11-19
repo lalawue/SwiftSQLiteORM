@@ -79,7 +79,7 @@ public struct DBRecordFilter<T: DBTableDef> {
                 sql += " `\(key.rawValue)` = '\(_value(value))'"
                 needWhere = true
             case .neq(let key, let value):
-                sql += " `\(key.rawValue)` != '\(_value(value))'"
+                sql += " `\(key.rawValue)` != '\(_value( value))'"
                 needWhere = true
             case .gt(let key, let value):
                 sql += " `\(key.rawValue)` > '\(_value(value))'"
@@ -97,7 +97,7 @@ public struct DBRecordFilter<T: DBTableDef> {
                 sql += " `\(key)` LIKE '\(_value(value))'"
                 needWhere = true
             case .in(let key, let values):
-                sql += " `\(key.rawValue)` IN (\(values.map{"'\($0)'"}.joined(separator: ",")))"
+                sql += " `\(key.rawValue)` IN (\(values.map{"'\(_value($0))'"}.joined(separator: ",")))"
                 needWhere = true
             case .not:
                 sql += " NOT"
@@ -105,7 +105,7 @@ public struct DBRecordFilter<T: DBTableDef> {
                 if let k = key {
                     sql += " `\(k.rawValue)`"
                 }
-                sql += " BETWEEN '\(v1)' AND '\(v2)'"
+                sql += " BETWEEN '\(_value(v1))' AND '\(_value(v2))'"
                 needWhere = true
             case .orderBy(let key, let seq):
                 if needOrderBy {

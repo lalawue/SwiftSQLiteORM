@@ -555,6 +555,8 @@ class Tests: XCTestCase {
             $0.float = 456
             $0.string = "789"
             $0.data = "987".data(using: .utf8)!
+            $0.uint32 = UInt32.max
+            $0.uint64 = 1
             $0.nsnumber = NSNumber(value: 654)
             $0.decimal = 321
         })
@@ -564,6 +566,8 @@ class Tests: XCTestCase {
             $0.float = 654
             $0.string = "321"
             $0.data = "123".data(using: .utf8)!
+            $0.uint32 = 1
+            $0.uint64 = UInt64.max
             $0.nsnumber = NSNumber(value: 456)
             $0.decimal = 789
         })
@@ -572,8 +576,8 @@ class Tests: XCTestCase {
         
         // eq
         tryBlock({
-            let c1 = try DBMgnt.fetch(BasicType.self, .eq(.int, c.int)).first ?? u
-            let u1 = try DBMgnt.fetch(BasicType.self, .eq(.int, u.int)).first ?? c
+            let c1 = try DBMgnt.fetch(BasicType.self, .eq(.uint32, c.uint32)).first ?? u
+            let u1 = try DBMgnt.fetch(BasicType.self, .eq(.uint64, UInt64.max)).first ?? c
             XCTAssert(c1 == c, "Failed")
             XCTAssert(u1 == u, "Failed")
         })
@@ -588,7 +592,7 @@ class Tests: XCTestCase {
         
         // gt
         tryBlock({
-            let c1 = try DBMgnt.fetch(BasicType.self, .gt(.int, c.int)).first ?? c
+            let c1 = try DBMgnt.fetch(BasicType.self, .gt(.uint64, UInt64.max - 1)).first ?? c
             let u1 = try DBMgnt.fetch(BasicType.self, .gt(.nsnumber, u.nsnumber)).first ?? u
             XCTAssert(c1 == u, "Failed")
             XCTAssert(u1 == c, "Failed")
