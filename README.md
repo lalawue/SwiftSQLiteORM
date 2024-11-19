@@ -178,25 +178,27 @@ extension Date: DBPrimitive {}
 extension NSDate: DBPrimitive {}
 ```
 
+and the ObjC wrappered type should return mock type in its ormTypeInfo() like `NSString`, `NSNumber` does.
+
 ### Filter Options
 
-filter option use `DBRecordFilter` to pass value to interface, when running `fetch` or `delete`.
+filter option use `DBRecordFilter` to pass value to SQLite, when running `fetch` or `delete`.
 
 SQLite will cast those input value according to column type, before performing calculation.
 
 supported column types are listed in `DBStoreType`:
 
-- INTEGER
-- REAL
-- TEXT
-- BLOB
+- .INTEGER
+- .REAL
+- .TEXT
+- .BLOB
 
 and any custom types confirms to `DBPrimitive` can box value inside `DBStoreValue` when store into database:
 
-- integer(Int64)
-- real(Double)
-- text(String)
-- blob(Data)
+- .integer(Int64)
+- .real(Double)
+- .text(String)
+- .blob(Data)
 
 also support optinal property, and column data is nullable.
 
