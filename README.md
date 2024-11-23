@@ -1,7 +1,7 @@
 
 # SwiftSQLiteORM
 
-SwiftSQLiteORM is a Swift SQLite ORM Protocol build on [GRDB.swift/SQLCipher](https://github.com/groue/GRDB.swift?tab=readme-ov-file#encryption), will auto create then connect database, create or alter table schema, mapping value between instance propertis and table columns.
+SwiftSQLiteORM is a Swift SQLite ORM Protocol build on [GRDB.swift/SQLCipher](https://github.com/groue/GRDB.swift?tab=readme-ov-file#encryption), will auto create then connect database, create or alter table schema, mapping value between instance property and table column.
 
 ## Features
 
@@ -31,7 +31,7 @@ relies on:
 
 ### Basic CURD
 
-refers to `func testReadmeExample()` in `TestSwiftSQLiteORM.swift`:
+refers to `testReadmeExample()` in `TestSwiftSQLiteORM.swift`:
 
 ```swift
 import SwiftSQLiteORM
@@ -96,7 +96,7 @@ func testReadmeExample() {
 
 ### Specify table name & database filename
 
-you can specify table name, or use a seperate database filename.
+you can specify table name, or use a seperate database file.
 
 ```swift
 struct ExampleType: DBTableDef {
@@ -137,9 +137,33 @@ struct ExampleType: DBTableDef {
 }
 ```
 
-### Supported ORM Types
+### Filter Options
 
-DBTableDef protocol support `DBPrimitive` or `Codable` type mapping, you can add other type conforms to `DBPrimitive`.
+filter option use `DBRecordFilter` to pass value to SQLite, make calculation or comparison to `ORMKey`, when running `fetch` or `delete`.
+
+SQLite will cast those input value according to column type, before performing calculation or comparison.
+
+supported column types are listed in `DBStoreType`:
+
+- .INTEGER
+- .REAL
+- .TEXT
+- .BLOB
+
+and any custom types confirms to `DBPrimitive` can box value inside `DBStoreValue` when store into database:
+
+- .integer(Int64)
+- .real(Double)
+- .text(String)
+- .blob(Data)
+
+also support optinal property, and column data is nullable.
+
+after table was created in database, `DO NOT` change column type, including optional type, for those property already mapping table column in database.
+
+### Buildin supported ORM types
+
+any ORM types should conforms to `DBPrimitive` or `Codable` protocol, some basic types a buildin support.
 
 ```swift
 extension Bool: DBPrimitive {}
@@ -180,27 +204,42 @@ extension NSDate: DBPrimitive {}
 
 and the ObjC wrappered type should return mock type in its ormTypeInfo() like `NSString`, `NSNumber` does.
 
-### Filter Options
+### DBPrimitive protocol
 
-filter option use `DBRecordFilter` to pass value to SQLite, when running `fetch` or `delete`.
+you can add other types conforms to `DBPrimitive`, support store / restore to database, take sturct `URL` for example:
 
-SQLite will cast those input value according to column type, before performing calculation.
+```swift
+extension URL: DBPrimitive {
 
-supported column types are listed in `DBStoreType`:
+    public init() {
+        // will be placed by database value later
+        self.init(string: "a://a.a")!
+    }
 
-- .INTEGER
-- .REAL
-- .TEXT
-- .BLOB
+    public static var ormStoreType: SwiftSQLiteORM.DBStoreType { .TEXT }
 
-and any custom types confirms to `DBPrimitive` can box value inside `DBStoreValue` when store into database:
+    public func ormToStoreValue() -> SwiftSQLiteORM.DBStoreValue? {
+        return .text(self.absoluteString)
+    }
 
-- .integer(Int64)
-- .real(Double)
-- .text(String)
-- .blob(Data)
+    public static func ormFromStoreValue(_ value: SwiftSQLiteORM.DBStoreValue) -> URL? {
+        guard case .text(let string) = value else {
+            return nil
+        }
+        return URL(string: string)
+    }
+}
+```
 
-also support optinal property, and column data is nullable.
+so `URL` store string to database, then restore its value from string, for its column type is `.TEXT`.
+
+then you can use `URL` in your struct / class property as other `DBPrimitive` types like `Int`, `String`, which support directly store / restore to database.
+
+more refers to `testDBPrimitiveProtocol()` in `TestSwiftSQLiteORM.swift`.
+
+those complex / nested struct or class which conforms to `Codable` will first encoded as JSON string before store string to database, then restore string to JSON object and mapping dictionary value to instance propertis.
+
+and those complex / nested struct or class also support filter calculation or comparison, according to column type `.TEXT`.
 
 ## Test
 

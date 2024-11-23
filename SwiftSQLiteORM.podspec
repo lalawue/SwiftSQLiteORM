@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'SwiftSQLiteORM'
-  s.version          = '0.1.20241116'
+  s.version          = '0.2.20241123'
   s.summary          = 'Swift ORM Protocol build on GRDB.swift/SQLCipher'
 
 # This description is used to generate tags and improve search results.
