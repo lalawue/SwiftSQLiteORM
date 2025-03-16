@@ -7,7 +7,7 @@ PODS:
   - SQLCipher/common (4.5.3)
   - SQLCipher/standard (4.5.3):
     - SQLCipher/common
-  - SwiftSQLiteORM (0.1.20241123):
+  - SwiftSQLiteORM (0.2.20241123):
     - GRDB.swift/SQLCipher
     - Runtime
     - SQLCipher (~> 4.0)
@@ -29,7 +29,7 @@ SPEC CHECKSUMS:
   GRDB.swift: 9a33d9680cd3c870c82f48a6cbc73d3cfbb235eb
   Runtime: 67741bd196fb4ad821c4d259ccc527bf734d8806
   SQLCipher: 57fa9f863fa4a3ed9dd3c90ace52315db8c0fdca
-  SwiftSQLiteORM: 80e910e04957b7471ec770ed3d04095acce40994
+  SwiftSQLiteORM: 8b8c3423f4be6e6ad3dd35230ec8d5c3bf0b3063
 
 PODFILE CHECKSUM: fb75430e6a01c7617485147236e0b7439db1e3af
 

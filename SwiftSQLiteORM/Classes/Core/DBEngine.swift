@@ -70,13 +70,13 @@ private class DBQueue {
     
     init(_ dbPath: String) throws {
         var pwd = ""
-        if let p = DBKeyChain.restorePasswd() {
+        if let p = DBDeafults.restorePasswd() {
             pwd = p
-        } else if DBKeyChain.storePasswd("SwiftSQLiteORM_\(arc4random())") {
-            pwd = DBKeyChain.restorePasswd() ?? ""
+        } else if DBDeafults.storePasswd("SwiftSQLiteORM_\(arc4random())") {
+            pwd = DBDeafults.restorePasswd() ?? ""
         }
         if pwd.isEmpty {
-            dbLog(isError: true, "failed to get database config's passwd")
+            dbLog(isError: true, "failed to get database config's pass phrase")
             throw DBORMError.FailedToGetCipherPasswd(dbPath: dbPath)
         } else {
             var config = GRDB.Configuration()
@@ -109,5 +109,26 @@ private class DBQueue {
         if let err = in_error {
             throw err
         }
+    }
+}
+
+fileprivate class DBDeafults {
+    
+    static func restorePasswd() -> String? {
+        shared.deaults.string(forKey: "SwiftSQLiteORM")
+    }
+    
+    static func storePasswd(_ passwd: String) -> Bool {
+        shared.deaults.set(passwd, forKey: "SwiftSQLiteORM")
+        return shared.deaults.synchronize()
+    }
+    
+    private let deaults: UserDefaults = {
+        UserDefaults(suiteName: "SwiftSQLiteORM") ?? UserDefaults.standard
+    }()
+    
+    private static let shared = DBDeafults()
+    
+    private init() {
     }
 }
